@@ -316,6 +316,7 @@ body {
       </div>
     </div>
     <button class="btn" id="btn-help" style="background:rgba(255,255,255,0.1);color:#aaaacc;padding:5px 10px;font-size:13px;border:1px solid #3a3a6a;">❓</button>
+    <button class="btn" id="btn-newgame" style="background:rgba(255,80,80,0.15);color:#ff8888;padding:5px 10px;font-size:13px;border:1px solid #5a2a2a;" title="放弃当前游戏，重新开始">↺</button>
   </div>
   <div id="boss-banner"></div>
   <div id="joker-area">
@@ -1243,6 +1244,9 @@ document.getElementById('btn-next-ante').addEventListener('click',()=>{ G.state=
 document.getElementById('btn-reroll').addEventListener('click',()=>{ if(G.money<5)return; G.money-=5; genShop(); renderShopItems(); });
 document.getElementById('btn-restart').addEventListener('click',restart);
 document.getElementById('btn-restart-win').addEventListener('click',restart);
+document.getElementById('btn-newgame').addEventListener('click',()=>{
+  if(confirm('放弃当前游戏，重新开始？')) restart();
+});
 
 // =============================================
 // INIT — load save or start fresh
