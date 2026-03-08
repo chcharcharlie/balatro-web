@@ -148,6 +148,49 @@ body {
 @keyframes popIn { 0%{transform:scale(0.5);opacity:0} 70%{transform:scale(1.08)} 100%{transform:scale(1);opacity:1} }
 .pop-in { animation:popIn 0.25s ease-out; }
 
+/* ===================== PLAY ZONE ===================== */
+#play-zone {
+  display: none; flex-direction: column; align-items: center; gap: 6px;
+  padding: 10px 16px 8px;
+  background: linear-gradient(180deg, rgba(5,5,30,0.8), rgba(5,5,20,0.5));
+  border-bottom: 1px solid #2a2a6a;
+  flex-shrink: 0;
+}
+#play-zone.active { display: flex; }
+#pz-cards { display:flex; gap:8px; align-items:flex-end; justify-content:center; min-height:80px; position:relative; }
+.pz-wrap { position:relative; display:flex; flex-direction:column; align-items:center; }
+#pz-hand-name { font-size:22px; font-weight:bold; color:#ffd700; text-shadow:0 0 12px rgba(255,215,0,0.6); opacity:0; transition:opacity 0.3s; min-height:28px; }
+#pz-hand-name.show { opacity:1; }
+#pz-formula { display:flex; align-items:center; gap:8px; font-size:17px; font-weight:bold; }
+.f-chips { color:#4488ff; font-size:20px; transition:all 0.15s; }
+.f-mult  { color:#ff6644; font-size:20px; transition:all 0.15s; }
+.f-total { color:#ffd700; font-size:24px; opacity:0; transition:opacity 0.4s; font-weight:900; }
+.f-total.show { opacity:1; }
+.f-op { color:#6666aa; font-size:15px; }
+#pz-log { display:flex; flex-direction:column; gap:2px; width:100%; max-width:360px; max-height:72px; overflow-y:auto; }
+.pzlog { display:flex; justify-content:space-between; font-size:11px; padding:2px 8px; border-radius:4px; background:rgba(255,255,255,0.04); opacity:0; transform:translateX(-6px); transition:opacity 0.2s, transform 0.2s; }
+.pzlog.show { opacity:1; transform:translateX(0); }
+
+/* ===================== CARD ANIMATIONS ===================== */
+@keyframes cardExit   { from{transform:translateY(0) scale(1);opacity:1} to{transform:translateY(-24px) scale(0.75);opacity:0} }
+@keyframes cardFlyIn  { from{transform:translateY(50px) scale(0.8);opacity:0} to{transform:translateY(0) scale(1);opacity:1} }
+@keyframes cardDealIn { from{transform:translateY(-35px) scale(0.85);opacity:0} to{transform:translateY(0) scale(1);opacity:1} }
+@keyframes cardOutDown{ from{transform:translateY(0) scale(1);opacity:1} to{transform:translateY(40px) scale(0.7);opacity:0} }
+@keyframes pzExit     { from{transform:translateY(0);opacity:1} to{transform:translateY(-20px);opacity:0} }
+
+.anim-exit    { animation:cardExit    0.22s ease-in  forwards; }
+.anim-fly-in  { animation:cardFlyIn   0.22s ease-out forwards; }
+.anim-deal-in { animation:cardDealIn  0.2s  ease-out forwards; }
+.anim-discard { animation:cardOutDown 0.2s  ease-in  forwards; }
+.anim-pz-exit { animation:pzExit     0.2s  ease-in  forwards; }
+
+/* Chip float above cards */
+@keyframes floatUp { 0%{transform:translateX(-50%) translateY(0) scale(0.6);opacity:0} 15%{opacity:1;transform:translateX(-50%) translateY(-4px) scale(1.05)} 85%{opacity:1;transform:translateX(-50%) translateY(-32px) scale(1)} 100%{opacity:0;transform:translateX(-50%) translateY(-44px) scale(0.9)} }
+.chip-float { position:absolute; top:0; left:50%; transform:translateX(-50%); font-size:11px; font-weight:bold; white-space:nowrap; pointer-events:none; animation:floatUp 0.85s ease-out forwards; z-index:20; }
+.cf-chips { color:#4daaff; text-shadow:0 0 8px rgba(77,170,255,0.9); }
+.cf-mult  { color:#ff7755; text-shadow:0 0 8px rgba(255,119,85,0.9); }
+.cf-xmult { color:#ff55ff; text-shadow:0 0 8px rgba(255,85,255,0.9); }
+
 /* HELP PANEL */
 .h-sec { margin-bottom:16px; }
 .h-sec p, .h-sec li { font-size:13px; color:#c0c0e0; line-height:1.6; margin-bottom:4px; }
@@ -272,6 +315,20 @@ body {
     <span class="jlbl">🃏 小丑：</span>
     <div id="joker-slots"></div>
   </div>
+  <!-- PLAY ZONE: shows during scoring animation -->
+  <div id="play-zone">
+    <div id="pz-hand-name"></div>
+    <div id="pz-cards"></div>
+    <div id="pz-formula">
+      <span id="pz-chips" class="f-chips">0</span>
+      <span class="f-op">×</span>
+      <span id="pz-mult" class="f-mult">0</span>
+      <span class="f-op">＝</span>
+      <span id="pz-total" class="f-total">?</span>
+    </div>
+    <div id="pz-log"></div>
+  </div>
+
   <div id="hand-type-display">选择手牌出牌</div>
   <div id="card-area"></div>
   <div id="action-bar">
@@ -619,9 +676,9 @@ function calcScore(hr, selCards){
   for(const card of hr.sc){
     let cv=card.chips;
     if(G.bossEffect==='HEAD'&&card.suit===G.bossDebuffSuit){
-      log.push({t:`${card.rank}${card.suit} (消除)`,kind:'chips',v:0,sfx:'筹码'});
+      log.push({t:`${card.rank}${card.suit} (消除)`,kind:'chips',v:0,sfx:'筹码',cardRef:card});
     } else {
-      log.push({t:`${card.rank}${card.suit}`,kind:'chips',v:cv,sfx:'筹码'});
+      log.push({t:`${card.rank}${card.suit}`,kind:'chips',v:cv,sfx:'筹码',cardRef:card});
       chips+=cv;
     }
   }
@@ -831,77 +888,195 @@ function buyPlanet(item){
 }
 
 // =============================================
-// SCORING ANIMATION
+// ANIMATION UTILITIES
 // =============================================
-function showScoring(hr, sr){
-  document.getElementById('scoring-overlay').classList.add('on');
-  document.getElementById('sco-hand-name').textContent=hr.name+'！';
-  const log=document.getElementById('sco-log');
-  log.innerHTML='';
-  document.getElementById('score-total').classList.remove('show');
-  document.getElementById('score-total').textContent='';
-  document.getElementById('btn-sco-continue').disabled=true;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-  // Highlight cards
-  for(const card of G.hand){
-    const el=document.querySelector(`[data-cid="${card.id}"]`);
+function animateNum(id, target, dur=280) {
+  const el = document.getElementById(id);
+  if(!el) return;
+  const start = parseFloat(el.textContent) || 0;
+  const t0 = Date.now();
+  const isInt = Number.isInteger(target);
+  const tick = () => {
+    const p = Math.min(1, (Date.now()-t0)/dur);
+    const ease = p<0.5 ? 2*p*p : -1+(4-2*p)*p; // ease-in-out
+    const v = start + (target-start)*ease;
+    el.textContent = isInt ? Math.round(v) : +v.toFixed(1);
+    if(p<1) requestAnimationFrame(tick);
+    else el.textContent = target;
+  };
+  requestAnimationFrame(tick);
+}
+
+function chipFloat(wrapEl, value, kind) {
+  if(value===0) return;
+  const f = document.createElement('div');
+  f.className = `chip-float cf-${kind}`;
+  const pre = kind==='xmult'?'×':'+';
+  const sfx = kind==='chips'?' 筹码':' 倍率';
+  f.textContent = pre + value + sfx;
+  wrapEl.appendChild(f);
+  setTimeout(()=>{ if(f.parentNode) f.remove(); }, 900);
+}
+
+function addPzLog(text, kind, value, sfx) {
+  const log = document.getElementById('pz-log');
+  const line = document.createElement('div');
+  line.className = 'pzlog';
+  const cls = kind==='chips'?'cv-chips':kind==='xmult'?'cv-xmult':'cv-mult';
+  const pre = kind==='xmult'?'×':'+';
+  line.innerHTML = `<span>${text}</span><span class="${cls}">${pre}${value} ${sfx}</span>`;
+  log.appendChild(line);
+  requestAnimationFrame(()=>setTimeout(()=>line.classList.add('show'),10));
+}
+
+// =============================================
+// PLAY ANIMATION
+// =============================================
+async function animatePlay(hr, sr, selCards) {
+  // 1. Hand cards: selected ones exit up, others dim
+  for(const card of G.hand) {
+    const el = document.querySelector(`[data-cid="${card.id}"]`);
     if(!el) continue;
-    if(hr.sc.includes(card)){el.classList.add('scoring');el.classList.remove('dim');}
-    else{el.classList.add('dim');el.classList.remove('scoring');}
+    if(card.sel) el.classList.add('anim-exit');
+    else el.classList.add('dim');
+  }
+  await sleep(230);
+
+  // 2. Activate play zone
+  const pz = document.getElementById('play-zone');
+  pz.classList.add('active');
+  document.getElementById('pz-hand-name').textContent='';
+  document.getElementById('pz-hand-name').classList.remove('show');
+  document.getElementById('pz-log').innerHTML='';
+  document.getElementById('pz-total').classList.remove('show');
+  document.getElementById('pz-total').textContent='?';
+
+  // 3. Cards fly into play zone
+  const pzCards = document.getElementById('pz-cards');
+  pzCards.innerHTML = '';
+  const wraps = [];
+  for(let i=0; i<selCards.length; i++) {
+    const card = selCards[i];
+    const wrap = document.createElement('div');
+    wrap.className = 'pz-wrap';
+    const cardEl = mkCard(card);
+    cardEl.classList.add('anim-fly-in');
+    cardEl.style.animationDelay = (i*55)+'ms';
+    if(!hr.sc.includes(card)) cardEl.classList.add('dim');
+    wrap.appendChild(cardEl);
+    pzCards.appendChild(wrap);
+    wraps.push({wrap, card});
+  }
+  await sleep(260 + selCards.length*55);
+
+  // 4. Show hand name + init formula
+  const base = G.getBase(hr.type);
+  let dChips = base.bc, dMult = base.bm;
+  document.getElementById('pz-chips').textContent = dChips;
+  document.getElementById('pz-mult').textContent = dMult;
+  document.getElementById('pz-hand-name').textContent = hr.name + '！';
+  document.getElementById('pz-hand-name').classList.add('show');
+  await sleep(350);
+
+  // 5. Animate each log entry (card chips + joker effects)
+  for(const entry of sr.log) {
+    await sleep(310);
+    if(entry.cardRef) {
+      const w = wraps.find(x=>x.card===entry.cardRef);
+      if(w) chipFloat(w.wrap, entry.v, 'chips');
+    } else {
+      chipFloat(pzCards, entry.v, entry.kind);
+    }
+    if(entry.kind==='chips')      { dChips+=entry.v; animateNum('pz-chips', dChips); }
+    else if(entry.kind==='mult')  { dMult+=entry.v;  animateNum('pz-mult', dMult); }
+    else if(entry.kind==='xmult'){ dMult=+(dMult*entry.v).toFixed(1); animateNum('pz-mult', dMult); }
+    addPzLog(entry.t, entry.kind, entry.v, entry.sfx);
+    await sleep(60);
   }
 
-  const base=G.getBase(hr.type);
-  const lines=[
-    {t:`${hr.name} 基础筹码`,kind:'chips',v:base.bc,sfx:'筹码'},
-    {t:`${hr.name} 基础倍率`,kind:'mult',v:base.bm,sfx:'倍率'},
+  await sleep(380);
+
+  // 6. Reveal total with animation
+  const totalEl = document.getElementById('pz-total');
+  totalEl.textContent = '0';
+  totalEl.classList.add('show');
+  animateNum('pz-total', sr.total, 400);
+  renderTopBar();
+
+  await sleep(500);
+
+  // 7. Open scoring dialog (kept as Charlie requested)
+  showScoringDialog(hr, sr);
+}
+
+function showScoringDialog(hr, sr) {
+  document.getElementById('scoring-overlay').classList.add('on');
+  document.getElementById('sco-hand-name').textContent = hr.name+'！';
+  const log = document.getElementById('sco-log');
+  log.innerHTML = '';
+  document.getElementById('score-total').classList.remove('show');
+  document.getElementById('score-total').textContent = '';
+  document.getElementById('btn-sco-continue').disabled = false;
+
+  const base = G.getBase(hr.type);
+  const lines = [
+    {t:`${hr.name} 基础`,kind:'chips',v:base.bc,sfx:'筹码'},
+    {t:`${hr.name} 基础`,kind:'mult',v:base.bm,sfx:'倍率'},
     ...sr.log
   ];
-  let delay=50;
+  let delay = 40;
   for(const entry of lines){
-    const ln=document.createElement('div');
-    ln.className='slog';
-    const cls=entry.kind==='chips'?'cv-chips':entry.kind==='xmult'?'cv-xmult':'cv-mult';
-    const pre=entry.kind==='xmult'?'×':'+';
-    ln.innerHTML=`<span>${entry.t}</span><span class="${cls}">${pre}${entry.v} ${entry.sfx}</span>`;
+    const ln = document.createElement('div');
+    ln.className = 'slog';
+    const cls = entry.kind==='chips'?'cv-chips':entry.kind==='xmult'?'cv-xmult':'cv-mult';
+    const pre = entry.kind==='xmult'?'×':'+';
+    ln.innerHTML = `<span>${entry.t}</span><span class="${cls}">${pre}${entry.v} ${entry.sfx}</span>`;
     log.appendChild(ln);
-    setTimeout(()=>ln.classList.add('show'),delay);
-    delay+=220;
+    setTimeout(()=>ln.classList.add('show'), delay);
+    delay += 100;
   }
   setTimeout(()=>{
-    const td=document.getElementById('score-total');
-    td.textContent=`${sr.chips} × ${sr.mult} = ${sr.total.toLocaleString()} 分`;
+    const td = document.getElementById('score-total');
+    td.textContent = `${sr.chips} × ${sr.mult} = ${sr.total.toLocaleString()} 分`;
     td.classList.add('show');
-    document.getElementById('btn-sco-continue').disabled=false;
-  },delay+100);
+  }, delay+60);
 }
 
 // =============================================
 // GAME ACTIONS
 // =============================================
-function playHand(){
-  const sel=G.hand.filter(c=>c.sel);
-  if(sel.length===0||G.handsLeft<=0) return;
-  const hr=evalHand(sel);
-  if(G.bossEffect==='EYE'&&G.playedTypes.includes(hr.type)) return;
+async function playHand(){
+  const sel = G.hand.filter(c=>c.sel);
+  if(sel.length===0 || G.handsLeft<=0) return;
+  const hr = evalHand(sel);
+  if(G.bossEffect==='EYE' && G.playedTypes.includes(hr.type)) return;
+
+  document.getElementById('btn-play').disabled = true;
+  document.getElementById('btn-discard').disabled = true;
+
   G.handsPlayed++;
   G.handsLeft--;
-  G.state='SCORING';
+  G.state = 'SCORING';
   if(G.bossEffect==='EYE') G.playedTypes.push(hr.type);
-  const sr=calcScore(hr,sel);
-  G.score+=sr.total;
-  showScoring(hr,sr);
-  renderTopBar();
+  const sr = calcScore(hr, sel);
+  G.score += sr.total;
+
+  await animatePlay(hr, sr, sel);
 }
 
 function afterScoring(){
   document.getElementById('scoring-overlay').classList.remove('on');
-  const sel=G.hand.filter(c=>c.sel);
-  G.hand=G.hand.filter(c=>!c.sel);
-  G.hand.push(...G.deck.deal(sel.length));
+  document.getElementById('play-zone').classList.remove('active');
+
+  const sel = G.hand.filter(c=>c.sel);
+  G.hand = G.hand.filter(c=>!c.sel);
+  const newCards = G.deck.deal(sel.length);
+  G.hand.push(...newCards);
   G.hand.forEach(c=>c.sel=false);
 
   if(G.score>=G.target){
-    // 过关奖励：固定$3 + 每剩余手次$1（高效打法有优势）
     G.money += 3 + G.handsLeft;
     if(G.blind===2){
       if(G.ante>=8){
@@ -921,17 +1096,43 @@ function afterScoring(){
       `Ante ${G.ante}/8，${BLIND_NAMES[G.blind]}，${G.score.toLocaleString()} / ${G.target.toLocaleString()} 分`;
     showScreen('screen-gameover'); return;
   }
-  G.state='PLAYING'; renderPlaying();
+
+  G.state='PLAYING';
+  renderPlaying();
+  // Animate new cards dealing in (staggered)
+  setTimeout(()=>{
+    for(let i=0; i<newCards.length; i++){
+      const el = document.querySelector(`[data-cid="${newCards[i].id}"]`);
+      if(el){ el.classList.add('anim-deal-in'); el.style.animationDelay=(i*60)+'ms'; }
+    }
+  }, 30);
 }
 
-function discard(){
-  const sel=G.hand.filter(c=>c.sel);
-  if(sel.length===0||G.discardsLeft<=0) return;
+async function discard(){
+  const sel = G.hand.filter(c=>c.sel);
+  if(sel.length===0 || G.discardsLeft<=0) return;
+
+  document.getElementById('btn-play').disabled = true;
+  document.getElementById('btn-discard').disabled = true;
+
+  for(const card of sel){
+    const el = document.querySelector(`[data-cid="${card.id}"]`);
+    if(el) el.classList.add('anim-discard');
+  }
+  await sleep(220);
+
   G.discardsLeft--;
-  G.hand=G.hand.filter(c=>!c.sel);
-  G.hand.push(...G.deck.deal(sel.length));
+  G.hand = G.hand.filter(c=>!c.sel);
+  const newCards = G.deck.deal(sel.length);
+  G.hand.push(...newCards);
   G.hand.forEach(c=>c.sel=false);
   renderPlaying();
+
+  await sleep(40);
+  for(let i=0; i<newCards.length; i++){
+    const el = document.querySelector(`[data-cid="${newCards[i].id}"]`);
+    if(el){ el.classList.add('anim-deal-in'); el.style.animationDelay=(i*65)+'ms'; }
+  }
 }
 
 function restart(){
