@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🃏 Balatro Lite</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #0f0f23;
+  color: #e0e0ff;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  height: 100vh;
+  overflow: hidden;
+  user-select: none;
+}
+.screen { display: none; height: 100vh; flex-direction: column; }
+.screen.active { display: flex; }
+
+/* CARDS */
+.card {
+  width: 72px; height: 100px;
+  background: #1e1e3a;
+  border: 2px solid #3a3a6a;
+  border-radius: 10px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: space-between;
+  padding: 5px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s, opacity 0.2s;
+  flex-shrink: 0;
+}
+.card:hover { transform: translateY(-6px); }
+.card.selected { transform: translateY(-22px); border-color: #ffd700; box-shadow: 0 0 14px rgba(255,215,0,0.5); }
+.card.scoring { border-color: #ffff55; box-shadow: 0 0 18px rgba(255,255,100,0.7); }
+.card.dim { opacity: 0.35; }
+.card.red { color: #ff4444; }
+.card.black { color: #44ffee; }
+.card-rank { font-size: 16px; font-weight: bold; line-height: 1; align-self: flex-start; }
+.card-suit { font-size: 26px; line-height: 1; }
+.card-rank-bot { font-size: 16px; font-weight: bold; line-height: 1; align-self: flex-end; transform: rotate(180deg); }
+
+/* BUTTONS */
+.btn { padding: 10px 22px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; transition: all 0.15s; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+.btn-blue  { background: linear-gradient(135deg,#4a90e2,#357abd); color:#fff; }
+.btn-blue:hover:not(:disabled)  { background: linear-gradient(135deg,#5aa0f2,#4590d0); transform:translateY(-1px); }
+.btn-red   { background: linear-gradient(135deg,#e24a4a,#bd3535); color:#fff; }
+.btn-red:hover:not(:disabled)   { background: linear-gradient(135deg,#f25a5a,#d04545); transform:translateY(-1px); }
+.btn-green { background: linear-gradient(135deg,#4ae24a,#35bd35); color:#0a1a0a; }
+.btn-green:hover:not(:disabled) { background: linear-gradient(135deg,#5af25a,#45d045); transform:translateY(-1px); }
+.btn-gold  { background: linear-gradient(135deg,#ffd700,#cc9900); color:#1a1000; }
+.btn-gold:hover:not(:disabled)  { background: linear-gradient(135deg,#ffe44d,#ddaa00); transform:translateY(-1px); }
+
+/* TOP BAR */
+#top-bar {
+  background: rgba(0,0,0,0.45);
+  padding: 8px 16px;
+  display: flex; align-items: center; gap: 14px;
+  border-bottom: 1px solid #2a2a4a;
+  flex-shrink: 0;
+}
+.info-box { background: rgba(255,255,255,0.06); border:1px solid #3a3a6a; border-radius:8px; padding:4px 12px; text-align:center; }
+.info-box .lbl { font-size:10px; color:#8888aa; text-transform:uppercase; }
+.info-box .val { font-size:18px; font-weight:bold; }
+#score-wrap { flex:1; }
+#score-bar-bg { background:rgba(0,0,0,0.35); border:1px solid #3a3a6a; border-radius:20px; height:28px; overflow:hidden; position:relative; }
+#score-bar { height:100%; background:linear-gradient(90deg,#4a90e2,#9a4ae2); border-radius:20px; transition:width 0.5s; min-width:0; }
+#score-bar-txt { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-weight:bold; font-size:12px; white-space:nowrap; }
+
+/* BOSS BANNER */
+#boss-banner { display:none; background:linear-gradient(135deg,#2a0000,#1a0000); border-bottom:2px solid #ff4444; color:#ff8888; text-align:center; padding:6px; font-size:13px; flex-shrink:0; }
+#boss-banner.on { display:block; }
+
+/* JOKER AREA */
+#joker-area { background:rgba(0,0,0,0.2); padding:8px 16px; display:flex; align-items:center; gap:8px; border-bottom:1px solid #2a2a4a; min-height:82px; flex-shrink:0; }
+#joker-area .jlbl { color:#887733; font-size:12px; margin-right:4px; white-space:nowrap; }
+#joker-slots { display:flex; gap:8px; flex-wrap:wrap; }
+.joker-card { background:linear-gradient(135deg,#2a1a00,#1a1200); border:2px solid #ffd700; border-radius:8px; padding:6px 10px; min-width:88px; max-width:108px; }
+.joker-card .jname { color:#ffd700; font-weight:bold; font-size:11px; margin-bottom:3px; }
+.joker-card .jdesc { color:#ccaa44; font-size:9px; line-height:1.3; }
+.joker-slot { background:rgba(255,215,0,0.04); border:2px dashed #443300; border-radius:8px; width:88px; height:66px; display:flex; align-items:center; justify-content:center; color:#443300; font-size:22px; }
+
+/* HAND TYPE */
+#hand-type-display { text-align:center; padding:6px; font-size:20px; font-weight:bold; color:#ffd700; min-height:40px; text-shadow:0 0 10px rgba(255,215,0,0.4); flex-shrink:0; }
+
+/* CARD AREA */
+#card-area { flex:1; display:flex; align-items:center; justify-content:center; padding:8px 16px; gap:7px; flex-wrap:wrap; overflow:hidden; }
+
+/* ACTION BAR */
+#action-bar { background:rgba(0,0,0,0.45); padding:10px 16px; display:flex; align-items:center; gap:14px; border-top:1px solid #2a2a4a; flex-shrink:0; }
+.counter { text-align:center; }
+.counter .clbl { font-size:10px; color:#8888aa; text-transform:uppercase; }
+.counter .cval { font-size:20px; font-weight:bold; }
+
+/* SCORING OVERLAY */
+#scoring-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.72); z-index:200; align-items:center; justify-content:center; }
+#scoring-overlay.on { display:flex; }
+#scoring-panel { background:#12122a; border:2px solid #4a4a8a; border-radius:16px; padding:22px; width:90%; max-width:460px; max-height:90vh; overflow-y:auto; }
+#scoring-panel h2 { text-align:center; color:#ffd700; font-size:26px; margin-bottom:14px; }
+.slog { display:flex; justify-content:space-between; align-items:center; padding:5px 10px; margin:3px 0; border-radius:6px; background:rgba(255,255,255,0.04); font-size:13px; opacity:0; transform:translateX(-8px); transition:opacity 0.25s,transform 0.25s; }
+.slog.show { opacity:1; transform:translateX(0); }
+.cv-chips { color:#4488ff; } .cv-mult { color:#ff6644; } .cv-xmult { color:#ff44ff; }
+#score-total { text-align:center; font-size:28px; font-weight:bold; color:#ffd700; margin:14px 0; opacity:0; transition:opacity 0.4s; }
+#score-total.show { opacity:1; }
+
+/* BLIND SELECT */
+#screen-blind-select { align-items:center; justify-content:center; gap:20px; }
+.blind-card { background:#12122a; border:2px solid #4a4a8a; border-radius:16px; padding:28px 44px; text-align:center; max-width:380px; width:90%; }
+.blind-card .btype { font-size:12px; color:#8888aa; text-transform:uppercase; margin-bottom:6px; }
+.blind-card .bname { font-size:32px; font-weight:bold; color:#e0e0ff; margin-bottom:10px; }
+.blind-card .btarget { font-size:18px; color:#ffd700; margin-bottom:6px; }
+.blind-card .beffect { font-size:12px; color:#ff8888; margin-bottom:14px; min-height:18px; }
+.blind-card .bante { font-size:12px; color:#6666aa; }
+
+/* SHOP */
+#screen-shop { }
+#shop-header { background:rgba(0,0,0,0.45); padding:14px 20px; display:flex; align-items:center; gap:16px; border-bottom:1px solid #2a2a4a; flex-shrink:0; }
+#shop-header h2 { color:#ffd700; font-size:22px; }
+#shop-body { flex:1; padding:16px 20px; overflow-y:auto; }
+.shop-sec { margin-bottom:20px; }
+.shop-sec h3 { color:#8888cc; font-size:12px; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px; }
+.shop-items { display:flex; gap:10px; flex-wrap:wrap; }
+.shop-item { background:#12122a; border:2px solid #3a3a6a; border-radius:12px; padding:12px; width:170px; cursor:pointer; transition:all 0.15s; position:relative; }
+.shop-item:hover:not(.sold):not(.cant-afford) { border-color:#ffd700; transform:translateY(-2px); }
+.shop-item.sold { opacity:0.4; cursor:not-allowed; }
+.shop-item.cant-afford { opacity:0.55; cursor:not-allowed; }
+.shop-item .iname { font-weight:bold; font-size:14px; color:#e0e0ff; margin-bottom:4px; }
+.shop-item .idesc { font-size:11px; color:#8888aa; margin-bottom:8px; line-height:1.4; }
+.shop-item .icost { font-size:13px; color:#ffd700; font-weight:bold; }
+.badge { position:absolute; top:7px; right:7px; font-size:9px; padding:2px 5px; border-radius:4px; font-weight:bold; }
+.badge-j { background:#332200; color:#ffaa00; border:1px solid #ffaa00; }
+.badge-p { background:#001833; color:#4488ff; border:1px solid #4488ff; }
+
+/* GAME OVER / WIN */
+#screen-gameover,#screen-win { align-items:center; justify-content:center; gap:20px; text-align:center; }
+#screen-gameover h1 { font-size:52px; color:#ff4444; }
+#screen-win h1 { font-size:52px; color:#ffd700; }
+.end-sub { color:#8888aa; font-size:15px; }
+
+@keyframes popIn { 0%{transform:scale(0.5);opacity:0} 70%{transform:scale(1.08)} 100%{transform:scale(1);opacity:1} }
+.pop-in { animation:popIn 0.25s ease-out; }
+</style>
+</head>
+<body>
+
+<!-- BLIND SELECT -->
+<div id="screen-blind-select" class="screen">
+  <div class="blind-card">
+    <div class="btype" id="bs-type">小盲注</div>
+    <div class="bname" id="bs-name">小盲注</div>
+    <div class="btarget" id="bs-target">目标：300 分</div>
+    <div class="beffect" id="bs-effect"></div>
+    <div class="bante" id="bs-ante">Ante 1 / 8</div>
+  </div>
+  <button class="btn btn-green" id="btn-start" style="font-size:20px;padding:14px 44px;">⚔️ 开始！</button>
+</div>
+
+<!-- PLAYING -->
+<div id="screen-playing" class="screen">
+  <div id="top-bar">
+    <div class="info-box"><div class="lbl">Ante</div><div class="val" id="info-ante">1</div></div>
+    <div class="info-box"><div class="lbl">盲注</div><div class="val" id="info-blind">小盲</div></div>
+    <div class="info-box"><div class="lbl">💰</div><div class="val" id="info-money">$4</div></div>
+    <div id="score-wrap">
+      <div id="score-bar-bg">
+        <div id="score-bar" style="width:0%"></div>
+        <div id="score-bar-txt">0 / 300</div>
+      </div>
+    </div>
+  </div>
+  <div id="boss-banner"></div>
+  <div id="joker-area">
+    <span class="jlbl">🃏 小丑：</span>
+    <div id="joker-slots"></div>
+  </div>
+  <div id="hand-type-display">选择手牌出牌</div>
+  <div id="card-area"></div>
+  <div id="action-bar">
+    <button class="btn btn-blue" id="btn-play" disabled>▶ 出牌</button>
+    <button class="btn btn-red" id="btn-discard" disabled>🗑 弃牌</button>
+    <div style="flex:1"></div>
+    <div class="counter"><div class="clbl">出牌次数</div><div class="cval" id="hands-left">3</div></div>
+    <div class="counter"><div class="clbl">弃牌次数</div><div class="cval" id="discards-left">3</div></div>
+  </div>
+</div>
+
+<!-- SCORING OVERLAY -->
+<div id="scoring-overlay">
+  <div id="scoring-panel">
+    <h2 id="sco-hand-name">一对！</h2>
+    <div id="sco-log"></div>
+    <div id="score-total"></div>
+    <button class="btn btn-blue" id="btn-sco-continue" style="display:block;margin:0 auto;">继续</button>
+  </div>
+</div>
+
+<!-- SHOP -->
+<div id="screen-shop" class="screen">
+  <div id="shop-header">
+    <h2>🛒 商店</h2>
+    <div class="info-box"><div class="lbl">💰</div><div class="val" id="shop-money">$0</div></div>
+    <div style="flex:1"></div>
+    <button class="btn btn-gold" id="btn-reroll" style="font-size:13px;padding:8px 16px;">重置商品 ($5)</button>
+    <button class="btn btn-green" id="btn-next-ante" style="font-size:15px;padding:10px 24px;">下一关 →</button>
+  </div>
+  <div id="shop-body">
+    <div class="shop-sec"><h3>🃏 小丑牌</h3><div class="shop-items" id="shop-jokers"></div></div>
+    <div class="shop-sec"><h3>🪐 行星牌（升级牌型）</h3><div class="shop-items" id="shop-planets"></div></div>
+  </div>
+</div>
+
+<!-- GAME OVER -->
+<div id="screen-gameover" class="screen">
+  <h1>💀 游戏结束</h1>
+  <p class="end-sub" id="go-stats"></p>
+  <button class="btn btn-blue" id="btn-restart" style="font-size:18px;padding:12px 36px;margin-top:10px;">再来一局</button>
+</div>
+
+<!-- WIN -->
+<div id="screen-win" class="screen">
+  <h1>🏆 恭喜通关！</h1>
+  <p class="end-sub">你击败了全部 8 个 Ante！</p>
+  <p class="end-sub" id="win-stats"></p>
+  <button class="btn btn-gold" id="btn-restart-win" style="font-size:18px;padding:12px 36px;margin-top:10px;">再玩一局</button>
+</div>
+
+<script>
+// =============================================
+// CONSTANTS
+// =============================================
+const SUITS = ['♠','♥','♦','♣'];
+const RANKS = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+const CHIP_VAL = {'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,'J':10,'Q':10,'K':10,'A':11};
+const RANK_ORD = {'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14};
+
+const HTYPES = {
+  STRAIGHT_FLUSH:  {name:'同花顺', bc:100, bm:8},
+  FOUR_OF_A_KIND:  {name:'四条',   bc:60,  bm:7},
+  FULL_HOUSE:      {name:'葫芦',   bc:40,  bm:4},
+  FLUSH:           {name:'同花',   bc:35,  bm:4},
+  STRAIGHT:        {name:'顺子',   bc:30,  bm:4},
+  THREE_OF_A_KIND: {name:'三条',   bc:30,  bm:3},
+  TWO_PAIR:        {name:'两对',   bc:20,  bm:2},
+  PAIR:            {name:'一对',   bc:10,  bm:2},
+  HIGH_CARD:       {name:'高牌',   bc:5,   bm:1},
+};
+
+const BLIND_TARGETS = [
+  [300,450,600],[800,1200,1600],[2000,3000,4000],[5000,7500,10000],
+  [11000,16500,22000],[20000,30000,40000],[35000,52500,70000],[50000,75000,100000]
+];
+const BLIND_NAMES = ['小盲注','大盲注','Boss盲注'];
+
+const BOSS_EFFECTS = [
+  {id:'WATER', name:'水之盲注', desc:'本局弃牌次数变为 0'},
+  {id:'EYE',   name:'眼之盲注', desc:'不能重复使用同种牌型'},
+  {id:'HEAD',  name:'头之盲注', desc:'随机一种花色不计筹码'},
+];
+
+const PLANET_DEFS = [
+  {id:'P_HC', name:'冥王星', emoji:'🪐', hand:'HIGH_CARD'},
+  {id:'P_PR', name:'水星',   emoji:'⚫', hand:'PAIR'},
+  {id:'P_TP', name:'天王星', emoji:'🔵', hand:'TWO_PAIR'},
+  {id:'P_3K', name:'金星',   emoji:'🟡', hand:'THREE_OF_A_KIND'},
+  {id:'P_ST', name:'土星',   emoji:'💫', hand:'STRAIGHT'},
+  {id:'P_FL', name:'木星',   emoji:'🟠', hand:'FLUSH'},
+  {id:'P_FH', name:'地球',   emoji:'🌍', hand:'FULL_HOUSE'},
+  {id:'P_4K', name:'火星',   emoji:'🔴', hand:'FOUR_OF_A_KIND'},
+  {id:'P_SF', name:'海王星', emoji:'🔷', hand:'STRAIGHT_FLUSH'},
+];
+
+const JOKER_DEFS = [
+  {id:'J01',name:'快乐小丑',cost:3,desc:'含一对时：+8 倍率',
+   apply(h,g){return ['PAIR','TWO_PAIR','FULL_HOUSE'].includes(h.type)?{am:8}:{};}},
+  {id:'J02',name:'疯狂小丑',cost:3,desc:'含三条时：+12 倍率',
+   apply(h,g){return ['THREE_OF_A_KIND','FULL_HOUSE','FOUR_OF_A_KIND'].includes(h.type)?{am:12}:{};}},
+  {id:'J03',name:'愤怒小丑',cost:3,desc:'含两对时：+10 倍率',
+   apply(h,g){return ['TWO_PAIR','FULL_HOUSE'].includes(h.type)?{am:10}:{};}},
+  {id:'J04',name:'古怪小丑',cost:3,desc:'含顺子时：+12 倍率',
+   apply(h,g){return ['STRAIGHT','STRAIGHT_FLUSH'].includes(h.type)?{am:12}:{};}},
+  {id:'J05',name:'滑稽小丑',cost:3,desc:'含同花时：+10 倍率',
+   apply(h,g){return ['FLUSH','STRAIGHT_FLUSH'].includes(h.type)?{am:10}:{};}},
+  {id:'J06',name:'狡猾小丑',cost:4,desc:'含一对时：+50 筹码',
+   apply(h,g){return ['PAIR','TWO_PAIR','FULL_HOUSE'].includes(h.type)?{ac:50}:{};}},
+  {id:'J07',name:'半个小丑',cost:5,desc:'出牌≤3张：+20 倍率',
+   apply(h,g){return h.n<=3?{am:20}:{};}},
+  {id:'J08',name:'横幅',cost:5,desc:'每剩余1次弃牌：+30 筹码',
+   apply(h,g){return {ac:g.discardsLeft*30};}},
+  {id:'J09',name:'神秘巅峰',cost:5,desc:'弃牌次数为0时：+15 倍率',
+   apply(h,g){return g.discardsLeft===0?{am:15}:{};}},
+  {id:'J10',name:'印错牌',cost:4,desc:'随机 +0~23 倍率',
+   apply(h,g){return {am:Math.floor(Math.random()*24)};}},
+  {id:'J11',name:'忠诚卡',cost:5,desc:'每出6次牌：×4 倍率',
+   apply(h,g){return (g.handsPlayed>0&&g.handsPlayed%6===0)?{xm:4}:{};}},
+  {id:'J12',name:'举拳头',cost:5,desc:'最低点数×2 作为+倍率',
+   apply(h,g){
+     if(!h.cards||h.cards.length===0) return {};
+     const min=Math.min(...h.cards.map(c=>RANK_ORD[c.rank]));
+     return {am:min*2};
+   }},
+  {id:'J13',name:'小丑模板',cost:8,desc:'每个空槽：×1 额外倍率',
+   apply(h,g){const e=4-g.jokers.length; return e>0?{xm:1+e}:{};}},
+  {id:'J14',name:'聪明小丑',cost:4,desc:'含两对时：+80 筹码',
+   apply(h,g){return ['TWO_PAIR','FULL_HOUSE'].includes(h.type)?{ac:80}:{};}},
+  {id:'J15',name:'狡野小丑',cost:5,desc:'含三条时：+100 筹码',
+   apply(h,g){return ['THREE_OF_A_KIND','FULL_HOUSE','FOUR_OF_A_KIND'].includes(h.type)?{ac:100}:{};}},
+];
+
+// =============================================
+// CARD & DECK
+// =============================================
+class Card {
+  constructor(suit,rank){ this.suit=suit; this.rank=rank; this.id=suit+rank; this.sel=false; }
+  get chips(){ return CHIP_VAL[this.rank]; }
+  get ro(){ return RANK_ORD[this.rank]; }
+  get isRed(){ return this.suit==='♥'||this.suit==='♦'; }
+}
+
+class Deck {
+  constructor(){
+    this.pile=[];
+    for(const s of SUITS) for(const r of RANKS) this.pile.push(new Card(s,r));
+    this.shuffle();
+  }
+  shuffle(){
+    for(let i=this.pile.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [this.pile[i],this.pile[j]]=[this.pile[j],this.pile[i]];
+    }
+  }
+  deal(n){ return this.pile.splice(0,Math.min(n,this.pile.length)); }
+}
+
+// =============================================
+// HAND EVALUATOR
+// =============================================
+function evalHand(cards){
+  if(!cards||cards.length===0) return {type:'HIGH_CARD',sc:[],name:'高牌'};
+  const sorted=[...cards].sort((a,b)=>b.ro-a.ro);
+  const rc={}, sc={};
+  for(const c of sorted){ rc[c.rank]=(rc[c.rank]||0)+1; sc[c.suit]=(sc[c.suit]||0)+1; }
+  const counts=Object.values(rc).sort((a,b)=>b-a);
+  const isFlush=cards.length>=5&&Object.values(sc).some(v=>v>=5);
+  const uniq=[...new Set(sorted.map(c=>c.ro))].sort((a,b)=>a-b);
+  let isStraight=false, stCards=[];
+  if(uniq.length>=5){
+    for(let i=0;i<=uniq.length-5;i++){
+      const sl=uniq.slice(i,i+5);
+      if(sl[4]-sl[0]===4){
+        isStraight=true;
+        const ss=new Set(sl);
+        stCards=sorted.filter(c=>ss.has(c.ro));
+        break;
+      }
+    }
+    if(!isStraight&&uniq.includes(14)){
+      const al=[...uniq.filter(r=>r<=5)].sort((a,b)=>a-b);
+      if(al.length>=4){
+        const withAce=[1,...al].sort((a,b)=>a-b).slice(-5);
+        if(withAce.length===5&&withAce[4]-withAce[0]===4){
+          isStraight=true;
+          stCards=sorted.filter(c=>c.ro<=5||c.ro===14);
+        }
+      }
+    }
+  }
+  if(isStraight&&isFlush) return {type:'STRAIGHT_FLUSH',sc:stCards.slice(0,5),name:'同花顺'};
+  if(counts[0]>=4){
+    const fr=Object.keys(rc).find(r=>rc[r]>=4);
+    return {type:'FOUR_OF_A_KIND',sc:sorted.filter(c=>c.rank===fr),name:'四条'};
+  }
+  if(counts[0]===3&&counts[1]>=2) return {type:'FULL_HOUSE',sc:sorted.slice(0,5),name:'葫芦'};
+  if(isFlush){
+    const fs=Object.keys(sc).find(s=>sc[s]>=5);
+    return {type:'FLUSH',sc:sorted.filter(c=>c.suit===fs).slice(0,5),name:'同花'};
+  }
+  if(isStraight) return {type:'STRAIGHT',sc:stCards.slice(0,5),name:'顺子'};
+  if(counts[0]===3){
+    const tr=Object.keys(rc).find(r=>rc[r]===3);
+    return {type:'THREE_OF_A_KIND',sc:sorted.filter(c=>c.rank===tr),name:'三条'};
+  }
+  if(counts[0]===2&&counts[1]===2){
+    const ps=Object.keys(rc).filter(r=>rc[r]===2).sort((a,b)=>RANK_ORD[b]-RANK_ORD[a]);
+    return {type:'TWO_PAIR',sc:sorted.filter(c=>ps.includes(c.rank)),name:'两对'};
+  }
+  if(counts[0]===2){
+    const pr=Object.keys(rc).find(r=>rc[r]===2);
+    return {type:'PAIR',sc:sorted.filter(c=>c.rank===pr),name:'一对'};
+  }
+  return {type:'HIGH_CARD',sc:[sorted[0]],name:'高牌'};
+}
+
+// =============================================
+// GAME STATE
+// =============================================
+const G = {
+  state:'BLIND_SELECT', ante:1, blind:0, score:0, target:300,
+  money:4, handsLeft:3, discardsLeft:3,
+  jokers:[], handLevels:{}, handsPlayed:0,
+  deck:null, hand:[], bossEffect:null, bossDebuffSuit:null,
+  playedTypes:[], shopItems:null,
+
+  getBase(type){
+    const h=HTYPES[type];
+    const lv=(this.handLevels[type]||1)-1;
+    return {bc:h.bc+lv*15, bm:h.bm+lv};
+  },
+  setupBoss(){
+    if(this.blind===2){
+      const e=BOSS_EFFECTS[Math.floor(Math.random()*BOSS_EFFECTS.length)];
+      this.bossEffect=e.id;
+      this.bossDebuffSuit=e.id==='HEAD'?SUITS[Math.floor(Math.random()*4)]:null;
+    } else { this.bossEffect=null; this.bossDebuffSuit=null; }
+  },
+  startBlind(){
+    this.score=0;
+    this.handsLeft=3;
+    this.discardsLeft=this.bossEffect==='WATER'?0:3;
+    this.playedTypes=[];
+    this.deck=new Deck();
+    this.hand=this.deck.deal(8);
+    this.state='PLAYING';
+  },
+};
+
+// =============================================
+// SCORE CALCULATION
+// =============================================
+function calcScore(hr, selCards){
+  const base=G.getBase(hr.type);
+  let chips=base.bc, mult=base.bm;
+  const log=[];
+  for(const card of hr.sc){
+    let cv=card.chips;
+    if(G.bossEffect==='HEAD'&&card.suit===G.bossDebuffSuit){
+      log.push({t:`${card.rank}${card.suit} (消除)`,kind:'chips',v:0,sfx:'筹码'});
+    } else {
+      log.push({t:`${card.rank}${card.suit}`,kind:'chips',v:cv,sfx:'筹码'});
+      chips+=cv;
+    }
+  }
+  let xMults=[];
+  for(const j of G.jokers){
+    const def=JOKER_DEFS.find(d=>d.id===j.id);
+    if(!def) continue;
+    const r=def.apply({type:hr.type,cards:selCards,n:selCards.length,sc:hr.sc},G);
+    if(r.ac){chips+=r.ac; log.push({t:def.name,kind:'chips',v:r.ac,sfx:'筹码'});}
+    if(r.am){mult+=r.am;  log.push({t:def.name,kind:'mult',v:r.am,sfx:'倍率'});}
+    if(r.xm) xMults.push({name:def.name,v:r.xm});
+  }
+  for(const xm of xMults){
+    mult=+(mult*xm.v).toFixed(1);
+    log.push({t:xm.name,kind:'xmult',v:xm.v,sfx:'×倍率'});
+  }
+  return {chips,mult,total:Math.floor(chips*mult),log};
+}
+
+// =============================================
+// SHOP
+// =============================================
+function genShop(){
+  const owned=new Set(G.jokers.map(j=>j.id));
+  const avail=JOKER_DEFS.filter(j=>!owned.has(j.id)).sort(()=>Math.random()-0.5);
+  const planets=[...PLANET_DEFS].sort(()=>Math.random()-0.5);
+  G.shopItems={
+    jokers:avail.slice(0,2).map(j=>({...j,sold:false})),
+    planets:planets.slice(0,2).map(p=>({...p,sold:false,cost:3}))
+  };
+}
+
+// =============================================
+// RENDERING
+// =============================================
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function renderTopBar(){
+  document.getElementById('info-ante').textContent=G.ante;
+  document.getElementById('info-blind').textContent=BLIND_NAMES[G.blind];
+  document.getElementById('info-money').textContent='$'+G.money;
+  const pct=Math.min(100,Math.round(G.score/G.target*100));
+  document.getElementById('score-bar').style.width=pct+'%';
+  document.getElementById('score-bar-txt').textContent=
+    G.score.toLocaleString()+' / '+G.target.toLocaleString();
+}
+
+function renderJokers(){
+  const c=document.getElementById('joker-slots');
+  c.innerHTML='';
+  for(let i=0;i<4;i++){
+    if(i<G.jokers.length){
+      const j=G.jokers[i];
+      const def=JOKER_DEFS.find(d=>d.id===j.id);
+      const el=document.createElement('div');
+      el.className='joker-card pop-in';
+      el.innerHTML=`<div class="jname">${def.name}</div><div class="jdesc">${def.desc}</div>`;
+      c.appendChild(el);
+    } else {
+      const sl=document.createElement('div');
+      sl.className='joker-slot';
+      sl.textContent='+';
+      c.appendChild(sl);
+    }
+  }
+}
+
+function renderHand(){
+  const c=document.getElementById('card-area');
+  c.innerHTML='';
+  for(const card of G.hand){
+    const el=mkCard(card);
+    el.addEventListener('click',()=>{
+      if(G.state!=='PLAYING') return;
+      const sel=G.hand.filter(c=>c.sel);
+      if(!card.sel&&sel.length>=5) return;
+      card.sel=!card.sel;
+      renderHand();
+    });
+    c.appendChild(el);
+  }
+  updateHTDisplay();
+  updateButtons();
+}
+
+function mkCard(card){
+  const el=document.createElement('div');
+  el.className='card'+(card.isRed?' red':' black')+(card.sel?' selected':'');
+  el.dataset.cid=card.id;
+  el.innerHTML=`<span class="card-rank">${card.rank}</span><span class="card-suit">${card.suit}</span><span class="card-rank-bot">${card.rank}</span>`;
+  return el;
+}
+
+function updateHTDisplay(){
+  const sel=G.hand.filter(c=>c.sel);
+  if(sel.length===0){ document.getElementById('hand-type-display').textContent='选择手牌出牌'; return; }
+  const hr=evalHand(sel);
+  let txt=hr.name+' ✨';
+  if(G.bossEffect==='EYE'&&G.playedTypes.includes(hr.type)) txt+=' ❌(已用过)';
+  document.getElementById('hand-type-display').textContent=txt;
+}
+
+function updateButtons(){
+  const sel=G.hand.filter(c=>c.sel);
+  let eyeBlock=false;
+  if(G.bossEffect==='EYE'&&sel.length>0){
+    const hr=evalHand(sel);
+    if(G.playedTypes.includes(hr.type)) eyeBlock=true;
+  }
+  document.getElementById('btn-play').disabled=sel.length===0||G.handsLeft<=0||eyeBlock;
+  document.getElementById('btn-discard').disabled=sel.length===0||G.discardsLeft<=0;
+  document.getElementById('hands-left').textContent=G.handsLeft;
+  document.getElementById('discards-left').textContent=G.discardsLeft;
+}
+
+function renderBossBanner(){
+  const b=document.getElementById('boss-banner');
+  if(G.blind===2&&G.bossEffect){
+    const e=BOSS_EFFECTS.find(x=>x.id===G.bossEffect);
+    let desc=e.desc;
+    if(G.bossEffect==='HEAD') desc+=`（${G.bossDebuffSuit}）`;
+    b.textContent=`⚠️ Boss效果：${e.name} — ${desc}`;
+    b.classList.add('on');
+  } else { b.classList.remove('on'); }
+}
+
+function renderBlindSelect(){
+  G.target=BLIND_TARGETS[G.ante-1][G.blind];
+  G.setupBoss();
+  document.getElementById('bs-type').textContent=BLIND_NAMES[G.blind];
+  document.getElementById('bs-ante').textContent=`Ante ${G.ante} / 8`;
+  document.getElementById('bs-target').textContent=`目标：${G.target.toLocaleString()} 分`;
+  if(G.blind===2&&G.bossEffect){
+    const e=BOSS_EFFECTS.find(x=>x.id===G.bossEffect);
+    let desc=e.desc;
+    if(G.bossEffect==='HEAD') desc+=`（${G.bossDebuffSuit}）`;
+    document.getElementById('bs-name').textContent=e.name;
+    document.getElementById('bs-effect').textContent=`⚠️ ${desc}`;
+  } else {
+    document.getElementById('bs-name').textContent=BLIND_NAMES[G.blind];
+    document.getElementById('bs-effect').textContent='';
+  }
+  showScreen('screen-blind-select');
+}
+
+function renderPlaying(){
+  renderTopBar(); renderJokers(); renderBossBanner(); renderHand();
+  showScreen('screen-playing');
+}
+
+function renderShop(){
+  genShop();
+  document.getElementById('shop-money').textContent='$'+G.money;
+  renderShopItems();
+  showScreen('screen-shop');
+}
+
+function renderShopItems(){
+  document.getElementById('shop-money').textContent='$'+G.money;
+  const owned=new Set(G.jokers.map(j=>j.id));
+  const jc=document.getElementById('shop-jokers');
+  jc.innerHTML='';
+  for(const item of G.shopItems.jokers){
+    const isOwned=owned.has(item.id);
+    const noMoney=G.money<item.cost;
+    const full=G.jokers.length>=4;
+    const disabled=item.sold||isOwned||noMoney||full;
+    const el=document.createElement('div');
+    el.className='shop-item'+(item.sold?' sold':disabled?' cant-afford':'');
+    el.innerHTML=`<span class="badge badge-j">小丑</span><div class="iname">${item.name}</div><div class="idesc">${item.desc}</div><div class="icost">${item.sold?'已售出':isOwned?'已拥有':full?'槽位已满':'$'+item.cost}</div>`;
+    if(!disabled) el.addEventListener('click',()=>buyJoker(item));
+    jc.appendChild(el);
+  }
+  const pc=document.getElementById('shop-planets');
+  pc.innerHTML='';
+  for(const item of G.shopItems.planets){
+    const noMoney=G.money<item.cost;
+    const el=document.createElement('div');
+    el.className='shop-item'+(item.sold?' sold':noMoney?' cant-afford':'');
+    const ht=HTYPES[item.hand];
+    const lv=G.handLevels[item.hand]||1;
+    el.innerHTML=`<span class="badge badge-p">行星</span><div class="iname">${item.emoji} ${item.name}</div><div class="idesc">升级 ${ht.name}<br>当前 Lv.${lv}</div><div class="icost">${item.sold?'已售出':noMoney?'💰不足':'$'+item.cost}</div>`;
+    if(!item.sold&&!noMoney) el.addEventListener('click',()=>buyPlanet(item));
+    pc.appendChild(el);
+  }
+  document.getElementById('btn-reroll').disabled=G.money<5;
+}
+
+function buyJoker(item){
+  if(G.money<item.cost||G.jokers.length>=4) return;
+  G.money-=item.cost; G.jokers.push({id:item.id}); item.sold=true;
+  renderShopItems();
+}
+function buyPlanet(item){
+  if(G.money<item.cost) return;
+  G.money-=item.cost; G.handLevels[item.hand]=(G.handLevels[item.hand]||1)+1; item.sold=true;
+  renderShopItems();
+}
+
+// =============================================
+// SCORING ANIMATION
+// =============================================
+function showScoring(hr, sr){
+  document.getElementById('scoring-overlay').classList.add('on');
+  document.getElementById('sco-hand-name').textContent=hr.name+'！';
+  const log=document.getElementById('sco-log');
+  log.innerHTML='';
+  document.getElementById('score-total').classList.remove('show');
+  document.getElementById('score-total').textContent='';
+  document.getElementById('btn-sco-continue').disabled=true;
+
+  // Highlight cards
+  for(const card of G.hand){
+    const el=document.querySelector(`[data-cid="${card.id}"]`);
+    if(!el) continue;
+    if(hr.sc.includes(card)){el.classList.add('scoring');el.classList.remove('dim');}
+    else{el.classList.add('dim');el.classList.remove('scoring');}
+  }
+
+  const base=G.getBase(hr.type);
+  const lines=[
+    {t:`${hr.name} 基础筹码`,kind:'chips',v:base.bc,sfx:'筹码'},
+    {t:`${hr.name} 基础倍率`,kind:'mult',v:base.bm,sfx:'倍率'},
+    ...sr.log
+  ];
+  let delay=50;
+  for(const entry of lines){
+    const ln=document.createElement('div');
+    ln.className='slog';
+    const cls=entry.kind==='chips'?'cv-chips':entry.kind==='xmult'?'cv-xmult':'cv-mult';
+    const pre=entry.kind==='xmult'?'×':'+';
+    ln.innerHTML=`<span>${entry.t}</span><span class="${cls}">${pre}${entry.v} ${entry.sfx}</span>`;
+    log.appendChild(ln);
+    setTimeout(()=>ln.classList.add('show'),delay);
+    delay+=220;
+  }
+  setTimeout(()=>{
+    const td=document.getElementById('score-total');
+    td.textContent=`${sr.chips} × ${sr.mult} = ${sr.total.toLocaleString()} 分`;
+    td.classList.add('show');
+    document.getElementById('btn-sco-continue').disabled=false;
+  },delay+100);
+}
+
+// =============================================
+// GAME ACTIONS
+// =============================================
+function playHand(){
+  const sel=G.hand.filter(c=>c.sel);
+  if(sel.length===0||G.handsLeft<=0) return;
+  const hr=evalHand(sel);
+  if(G.bossEffect==='EYE'&&G.playedTypes.includes(hr.type)) return;
+  G.handsPlayed++;
+  G.handsLeft--;
+  G.state='SCORING';
+  if(G.bossEffect==='EYE') G.playedTypes.push(hr.type);
+  const sr=calcScore(hr,sel);
+  G.score+=sr.total;
+  G.money+=1;
+  showScoring(hr,sr);
+  renderTopBar();
+}
+
+function afterScoring(){
+  document.getElementById('scoring-overlay').classList.remove('on');
+  const sel=G.hand.filter(c=>c.sel);
+  G.hand=G.hand.filter(c=>!c.sel);
+  G.hand.push(...G.deck.deal(sel.length));
+  G.hand.forEach(c=>c.sel=false);
+
+  if(G.score>=G.target){
+    G.money+=G.handsLeft;
+    if(G.blind===2){
+      if(G.ante>=8){
+        G.state='GAME_WIN';
+        document.getElementById('win-stats').textContent=`共出牌 ${G.handsPlayed} 次，太厉害了！`;
+        showScreen('screen-win'); return;
+      }
+      G.ante++; G.blind=0; G.state='SHOP'; renderShop();
+    } else {
+      G.blind++; G.state='BLIND_SELECT'; renderBlindSelect();
+    }
+    return;
+  }
+  if(G.handsLeft<=0){
+    G.state='GAME_OVER';
+    document.getElementById('go-stats').textContent=
+      `Ante ${G.ante}/8，${BLIND_NAMES[G.blind]}，${G.score.toLocaleString()} / ${G.target.toLocaleString()} 分`;
+    showScreen('screen-gameover'); return;
+  }
+  G.state='PLAYING'; renderPlaying();
+}
+
+function discard(){
+  const sel=G.hand.filter(c=>c.sel);
+  if(sel.length===0||G.discardsLeft<=0) return;
+  G.discardsLeft--;
+  G.hand=G.hand.filter(c=>!c.sel);
+  G.hand.push(...G.deck.deal(sel.length));
+  G.hand.forEach(c=>c.sel=false);
+  renderPlaying();
+}
+
+function restart(){
+  Object.assign(G,{
+    state:'BLIND_SELECT',ante:1,blind:0,score:0,money:4,
+    handsLeft:3,discardsLeft:3,jokers:[],handLevels:{},
+    handsPlayed:0,deck:null,hand:[],bossEffect:null,
+    bossDebuffSuit:null,playedTypes:[],shopItems:null
+  });
+  renderBlindSelect();
+}
+
+// =============================================
+// EVENT LISTENERS
+// =============================================
+document.getElementById('btn-start').addEventListener('click',()=>{ G.startBlind(); renderPlaying(); });
+document.getElementById('btn-play').addEventListener('click',playHand);
+document.getElementById('btn-discard').addEventListener('click',discard);
+document.getElementById('btn-sco-continue').addEventListener('click',afterScoring);
+document.getElementById('btn-next-ante').addEventListener('click',()=>{ G.state='BLIND_SELECT'; renderBlindSelect(); });
+document.getElementById('btn-reroll').addEventListener('click',()=>{ if(G.money<5)return; G.money-=5; genShop(); renderShopItems(); });
+document.getElementById('btn-restart').addEventListener('click',restart);
+document.getElementById('btn-restart-win').addEventListener('click',restart);
+
+// =============================================
+// INIT
+// =============================================
+renderBlindSelect();
+</script>
+</body>
+</html>
