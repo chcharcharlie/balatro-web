@@ -167,9 +167,16 @@ body {
 .f-total { color:#ffd700; font-size:24px; opacity:0; transition:opacity 0.4s; font-weight:900; }
 .f-total.show { opacity:1; }
 .f-op { color:#6666aa; font-size:15px; }
-#pz-log { display:flex; flex-direction:column; gap:2px; width:100%; max-width:360px; max-height:72px; overflow-y:auto; }
-.pzlog { display:flex; justify-content:space-between; font-size:11px; padding:2px 8px; border-radius:4px; background:rgba(255,255,255,0.04); opacity:0; transform:translateX(-6px); transition:opacity 0.2s, transform 0.2s; }
+#pz-log { display:flex; flex-direction:column; gap:2px; width:100%; max-width:360px; overflow:hidden; }
+.pzlog {
+  display:flex; justify-content:space-between; font-size:11px; padding:3px 8px;
+  border-radius:4px; background:rgba(255,255,255,0.04);
+  opacity:0; transform:translateX(-6px);
+  max-height:22px; overflow:hidden;
+  transition:opacity 0.3s, transform 0.3s, max-height 0.3s, padding 0.3s, opacity 0.3s;
+}
 .pzlog.show { opacity:1; transform:translateX(0); }
+.pzlog.fade-out { opacity:0 !important; transform:translateY(-4px) !important; max-height:0 !important; padding:0 !important; margin:0 !important; }
 
 /* ===================== CARD ANIMATIONS ===================== */
 @keyframes cardExit   { from{transform:translateY(0) scale(1);opacity:1} to{transform:translateY(-24px) scale(0.75);opacity:0} }
@@ -185,8 +192,8 @@ body {
 .anim-pz-exit { animation:pzExit     0.2s  ease-in  forwards; }
 
 /* Chip float above cards */
-@keyframes floatUp { 0%{transform:translateX(-50%) translateY(0) scale(0.6);opacity:0} 15%{opacity:1;transform:translateX(-50%) translateY(-4px) scale(1.05)} 85%{opacity:1;transform:translateX(-50%) translateY(-32px) scale(1)} 100%{opacity:0;transform:translateX(-50%) translateY(-44px) scale(0.9)} }
-.chip-float { position:absolute; top:0; left:50%; transform:translateX(-50%); font-size:11px; font-weight:bold; white-space:nowrap; pointer-events:none; animation:floatUp 0.85s ease-out forwards; z-index:20; }
+@keyframes floatUp { 0%{transform:translateX(-50%) translateY(0) scale(0.6);opacity:0} 12%{opacity:1;transform:translateX(-50%) translateY(-6px) scale(1.1)} 70%{opacity:1;transform:translateX(-50%) translateY(-28px) scale(1)} 100%{opacity:0;transform:translateX(-50%) translateY(-42px) scale(0.9)} }
+.chip-float { position:absolute; top:0; left:50%; transform:translateX(-50%); font-size:12px; font-weight:bold; white-space:nowrap; pointer-events:none; animation:floatUp 1.2s ease-out forwards; z-index:20; }
 .cf-chips { color:#4daaff; text-shadow:0 0 8px rgba(77,170,255,0.9); }
 .cf-mult  { color:#ff7755; text-shadow:0 0 8px rgba(255,119,85,0.9); }
 .cf-xmult { color:#ff55ff; text-shadow:0 0 8px rgba(255,85,255,0.9); }
@@ -928,7 +935,16 @@ function addPzLog(text, kind, value, sfx) {
   const pre = kind==='xmult'?'×':'+';
   line.innerHTML = `<span>${text}</span><span class="${cls}">${pre}${value} ${sfx}</span>`;
   log.appendChild(line);
-  requestAnimationFrame(()=>setTimeout(()=>line.classList.add('show'),10));
+
+  // Fade out oldest entries if more than 4 visible — always keep newest at bottom
+  const visible = [...log.querySelectorAll('.pzlog:not(.fade-out)')];
+  if(visible.length > 4) {
+    const old = visible[0];
+    old.classList.add('fade-out');
+    setTimeout(()=>{ if(old.parentNode) old.remove(); }, 320);
+  }
+
+  requestAnimationFrame(()=>setTimeout(()=>line.classList.add('show'), 10));
 }
 
 // =============================================
@@ -942,7 +958,7 @@ async function animatePlay(hr, sr, selCards) {
     if(card.sel) el.classList.add('anim-exit');
     else el.classList.add('dim');
   }
-  await sleep(230);
+  await sleep(280);
 
   // 2. Activate play zone
   const pz = document.getElementById('play-zone');
@@ -963,13 +979,13 @@ async function animatePlay(hr, sr, selCards) {
     wrap.className = 'pz-wrap';
     const cardEl = mkCard(card);
     cardEl.classList.add('anim-fly-in');
-    cardEl.style.animationDelay = (i*55)+'ms';
+    cardEl.style.animationDelay = (i*80)+'ms';
     if(!hr.sc.includes(card)) cardEl.classList.add('dim');
     wrap.appendChild(cardEl);
     pzCards.appendChild(wrap);
     wraps.push({wrap, card});
   }
-  await sleep(260 + selCards.length*55);
+  await sleep(350 + selCards.length*80);
 
   // 4. Show hand name + init formula
   const base = G.getBase(hr.type);
@@ -978,11 +994,11 @@ async function animatePlay(hr, sr, selCards) {
   document.getElementById('pz-mult').textContent = dMult;
   document.getElementById('pz-hand-name').textContent = hr.name + '！';
   document.getElementById('pz-hand-name').classList.add('show');
-  await sleep(350);
+  await sleep(600);
 
   // 5. Animate each log entry (card chips + joker effects)
   for(const entry of sr.log) {
-    await sleep(310);
+    await sleep(550);
     if(entry.cardRef) {
       const w = wraps.find(x=>x.card===entry.cardRef);
       if(w) chipFloat(w.wrap, entry.v, 'chips');
@@ -993,19 +1009,19 @@ async function animatePlay(hr, sr, selCards) {
     else if(entry.kind==='mult')  { dMult+=entry.v;  animateNum('pz-mult', dMult); }
     else if(entry.kind==='xmult'){ dMult=+(dMult*entry.v).toFixed(1); animateNum('pz-mult', dMult); }
     addPzLog(entry.t, entry.kind, entry.v, entry.sfx);
-    await sleep(60);
+    await sleep(80);
   }
 
-  await sleep(380);
+  await sleep(650);
 
   // 6. Reveal total with animation
   const totalEl = document.getElementById('pz-total');
   totalEl.textContent = '0';
   totalEl.classList.add('show');
-  animateNum('pz-total', sr.total, 400);
+  animateNum('pz-total', sr.total, 550);
   renderTopBar();
 
-  await sleep(500);
+  await sleep(750);
 
   // 7. Open scoring dialog (kept as Charlie requested)
   showScoringDialog(hr, sr);
