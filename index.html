@@ -680,7 +680,8 @@ function calcScore(hr, selCards){
   const base=G.getBase(hr.type);
   let chips=base.bc, mult=base.bm;
   const log=[];
-  for(const card of hr.sc){
+  // ALL played cards contribute chips; hr.sc cards are highlighted, kickers are dimmer but still score
+  for(const card of selCards){
     let cv=card.chips;
     if(G.bossEffect==='HEAD'&&card.suit===G.bossDebuffSuit){
       log.push({t:`${card.rank}${card.suit} (消除)`,kind:'chips',v:0,sfx:'筹码',cardRef:card});
@@ -886,12 +887,65 @@ function renderShopItems(){
 function buyJoker(item){
   if(G.money<item.cost||G.jokers.length>=4) return;
   G.money-=item.cost; G.jokers.push({id:item.id}); item.sold=true;
-  renderShopItems();
+  saveGame(); renderShopItems();
 }
 function buyPlanet(item){
   if(G.money<item.cost) return;
   G.money-=item.cost; G.handLevels[item.hand]=(G.handLevels[item.hand]||1)+1; item.sold=true;
-  renderShopItems();
+  saveGame(); renderShopItems();
+}
+
+// =============================================
+// SAVE / LOAD (localStorage)
+// =============================================
+const SAVE_KEY = 'balatro_lite_save';
+
+function saveGame() {
+  if(G.state === 'SCORING') return; // don't save mid-animation
+  try {
+    const s = {
+      ante: G.ante, blind: G.blind, score: G.score, money: G.money,
+      handsLeft: G.handsLeft, discardsLeft: G.discardsLeft,
+      jokers: G.jokers, handLevels: G.handLevels, handsPlayed: G.handsPlayed,
+      bossEffect: G.bossEffect, bossDebuffSuit: G.bossDebuffSuit,
+      playedTypes: G.playedTypes, state: G.state,
+      hand: G.hand ? G.hand.map(c=>({suit:c.suit,rank:c.rank})) : [],
+      deck: G.deck ? G.deck.pile.map(c=>({suit:c.suit,rank:c.rank})) : [],
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(s));
+  } catch(e) { console.warn('Save failed', e); }
+}
+
+function loadGame() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if(!raw) return false;
+    const s = JSON.parse(raw);
+    // Don't restore terminal states
+    if(s.state === 'GAME_OVER' || s.state === 'GAME_WIN') return false;
+    Object.assign(G, {
+      ante: s.ante, blind: s.blind, score: s.score, money: s.money,
+      handsLeft: s.handsLeft, discardsLeft: s.discardsLeft,
+      jokers: s.jokers || [], handLevels: s.handLevels || {},
+      handsPlayed: s.handsPlayed || 0,
+      bossEffect: s.bossEffect || null, bossDebuffSuit: s.bossDebuffSuit || null,
+      playedTypes: s.playedTypes || [], state: s.state,
+    });
+    G.hand = (s.hand||[]).map(c=>new Card(c.suit,c.rank));
+    // Restore deck (remaining cards)
+    const deckPile = (s.deck||[]).map(c=>new Card(c.suit,c.rank));
+    G.deck = { pile: deckPile, deal(n){ return this.pile.splice(0,Math.min(n,this.pile.length)); } };
+    G.target = BLIND_TARGETS[G.ante-1][G.blind];
+    return true;
+  } catch(e) {
+    console.warn('Load failed', e);
+    localStorage.removeItem(SAVE_KEY);
+    return false;
+  }
+}
+
+function clearSave() {
+  localStorage.removeItem(SAVE_KEY);
 }
 
 // =============================================
@@ -1097,23 +1151,30 @@ function afterScoring(){
     if(G.blind===2){
       if(G.ante>=8){
         G.state='GAME_WIN';
+        clearSave();
         document.getElementById('win-stats').textContent=`共出牌 ${G.handsPlayed} 次，太厉害了！`;
         showScreen('screen-win'); return;
       }
-      G.ante++; G.blind=0; G.state='SHOP'; renderShop();
+      G.ante++; G.blind=0; G.state='SHOP';
+      saveGame();
+      renderShop();
     } else {
-      G.blind++; G.state='BLIND_SELECT'; renderBlindSelect();
+      G.blind++; G.state='BLIND_SELECT';
+      saveGame();
+      renderBlindSelect();
     }
     return;
   }
   if(G.handsLeft<=0){
     G.state='GAME_OVER';
+    clearSave();
     document.getElementById('go-stats').textContent=
       `Ante ${G.ante}/8，${BLIND_NAMES[G.blind]}，${G.score.toLocaleString()} / ${G.target.toLocaleString()} 分`;
     showScreen('screen-gameover'); return;
   }
 
   G.state='PLAYING';
+  saveGame();
   renderPlaying();
   // Animate new cards dealing in (staggered)
   setTimeout(()=>{
@@ -1142,6 +1203,7 @@ async function discard(){
   const newCards = G.deck.deal(sel.length);
   G.hand.push(...newCards);
   G.hand.forEach(c=>c.sel=false);
+  saveGame();
   renderPlaying();
 
   await sleep(40);
@@ -1152,6 +1214,7 @@ async function discard(){
 }
 
 function restart(){
+  clearSave();
   Object.assign(G,{
     state:'BLIND_SELECT',ante:1,blind:0,score:0,money:4,
     handsLeft:3,discardsLeft:3,jokers:[],handLevels:{},
@@ -1172,7 +1235,7 @@ document.getElementById('btn-help-close').addEventListener('click', closeHelp);
 document.getElementById('btn-help-close2').addEventListener('click', closeHelp);
 document.getElementById('help-overlay').addEventListener('click', e=>{ if(e.target===document.getElementById('help-overlay')) closeHelp(); });
 
-document.getElementById('btn-start').addEventListener('click',()=>{ G.startBlind(); renderPlaying(); });
+document.getElementById('btn-start').addEventListener('click',()=>{ G.startBlind(); saveGame(); renderPlaying(); });
 document.getElementById('btn-play').addEventListener('click',playHand);
 document.getElementById('btn-discard').addEventListener('click',discard);
 document.getElementById('btn-sco-continue').addEventListener('click',afterScoring);
@@ -1182,9 +1245,23 @@ document.getElementById('btn-restart').addEventListener('click',restart);
 document.getElementById('btn-restart-win').addEventListener('click',restart);
 
 // =============================================
-// INIT
+// INIT — load save or start fresh
 // =============================================
-renderBlindSelect();
+if(loadGame()) {
+  // Resume from save
+  if(G.state === 'PLAYING') {
+    renderPlaying();
+  } else if(G.state === 'BLIND_SELECT') {
+    G.target = BLIND_TARGETS[G.ante-1][G.blind];
+    renderBlindSelect();
+  } else if(G.state === 'SHOP') {
+    renderShop();
+  } else {
+    renderBlindSelect();
+  }
+} else {
+  renderBlindSelect();
+}
 </script>
 </body>
 </html>
