@@ -2,7 +2,11 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f0f23">
 <title>🃏 Balatro Lite</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -140,6 +144,78 @@ body {
 
 @keyframes popIn { 0%{transform:scale(0.5);opacity:0} 70%{transform:scale(1.08)} 100%{transform:scale(1);opacity:1} }
 .pop-in { animation:popIn 0.25s ease-out; }
+
+/* ===================== MOBILE ===================== */
+@media (max-width: 600px) {
+  /* Cards: compact */
+  .card { width:56px; height:80px; padding:3px; border-radius:8px; border-width:1.5px; }
+  .card-rank { font-size:13px; }
+  .card-suit { font-size:20px; }
+  .card-rank-bot { font-size:13px; }
+  .card:hover { transform:none; }
+  .card.selected { transform:translateY(-16px); }
+
+  /* Top bar: compact */
+  #top-bar { padding:6px 8px; gap:6px; }
+  .info-box { padding:3px 7px; }
+  .info-box .lbl { font-size:9px; }
+  .info-box .val { font-size:14px; }
+  #score-bar-bg { height:24px; }
+  #score-bar-txt { font-size:11px; }
+
+  /* Boss banner: smaller */
+  #boss-banner { font-size:11px; padding:5px 8px; }
+
+  /* Joker area: horizontal scroll */
+  #joker-area { min-height:70px; padding:6px 10px; overflow-x:auto; flex-wrap:nowrap; }
+  .joker-card { min-width:76px; max-width:90px; padding:5px 8px; flex-shrink:0; }
+  .joker-card .jname { font-size:10px; }
+  .joker-card .jdesc { font-size:8px; }
+  .joker-slot { width:70px; height:56px; font-size:18px; flex-shrink:0; }
+
+  /* Hand type display: smaller */
+  #hand-type-display { font-size:16px; padding:4px; min-height:32px; }
+
+  /* Card area: tighter */
+  #card-area { gap:4px; padding:4px 8px; }
+
+  /* Action bar: bigger tap targets, compact */
+  #action-bar { padding:8px 10px; gap:8px; }
+  .btn { padding:10px 14px; font-size:14px; }
+  .counter .clbl { font-size:9px; }
+  .counter .cval { font-size:16px; }
+
+  /* Scoring panel: full width */
+  #scoring-panel { padding:16px; width:95%; }
+  #scoring-panel h2 { font-size:22px; }
+  .slog { font-size:12px; padding:4px 8px; }
+  #score-total { font-size:22px; }
+
+  /* Blind select */
+  .blind-card { padding:20px 24px; }
+  .blind-card .bname { font-size:26px; }
+  .blind-card .btarget { font-size:16px; }
+
+  /* Shop */
+  #shop-header { padding:10px 14px; gap:10px; flex-wrap:wrap; }
+  #shop-header h2 { font-size:18px; }
+  #shop-body { padding:12px 14px; }
+  .shop-item { width:calc(50% - 6px); }
+  .shop-item .iname { font-size:13px; }
+  .shop-item .idesc { font-size:10px; }
+
+  /* End screens */
+  #screen-gameover h1, #screen-win h1 { font-size:36px; }
+}
+
+/* Very small phones (< 380px) */
+@media (max-width: 380px) {
+  .card { width:48px; height:68px; }
+  .card-suit { font-size:17px; }
+  .card-rank { font-size:11px; }
+  .card-rank-bot { font-size:11px; }
+  #card-area { gap:3px; }
+}
 </style>
 </head>
 <body>
