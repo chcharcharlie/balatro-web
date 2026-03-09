@@ -1,0 +1,17 @@
+name: Notify chensquare on push
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger chensquare sync
+        run: |
+          curl -X POST \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token ${{ secrets.CHENSQUARE_DISPATCH_TOKEN }}" \
+            https://api.github.com/repos/chcharcharlie/chensquare/dispatches \
+            -d '{"event_type":"balatro-updated"}'
