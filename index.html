@@ -152,6 +152,7 @@ body {
 .badge { position:absolute; top:7px; right:7px; font-size:9px; padding:2px 5px; border-radius:4px; font-weight:bold; }
 .badge-j { background:#332200; color:#ffaa00; border:1px solid #ffaa00; }
 .badge-p { background:#001833; color:#4488ff; border:1px solid #4488ff; }
+.badge-v { background:#1a001a; color:#cc66ff; border:1px solid #cc66ff; }
 
 /* DIFFICULTY SELECT */
 #screen-difficulty { align-items:center; justify-content:center; gap:20px; flex-direction:column; }
@@ -248,6 +249,8 @@ body {
 
 /* Chip float above cards */
 @keyframes floatUp { 0%{transform:translateX(-50%) translateY(0) scale(0.6);opacity:0} 15%{opacity:1;transform:translateX(-50%) translateY(-12px) scale(1.1)} 70%{opacity:1;transform:translateX(-50%) translateY(-52px) scale(1)} 100%{opacity:0;transform:translateX(-50%) translateY(-70px) scale(0.9)} }
+@keyframes retrigPulse { 0%{transform:scale(1);box-shadow:0 0 0 rgba(0,255,200,0)} 40%{transform:scale(1.18);box-shadow:0 0 14px rgba(0,255,200,0.9)} 100%{transform:scale(1);box-shadow:0 0 0 rgba(0,255,200,0)} }
+.retrig-pulse { animation:retrigPulse 0.35s ease-out !important; }
 .chip-float { position:absolute; bottom:4px; top:auto; left:50%; transform:translateX(-50%); font-size:12px; font-weight:bold; white-space:nowrap; pointer-events:none; animation:floatUp 1.2s ease-out forwards; z-index:20; }
 .cf-chips { color:#4daaff; text-shadow:0 0 8px rgba(77,170,255,0.9); }
 .cf-mult  { color:#ff7755; text-shadow:0 0 8px rgba(255,119,85,0.9); }
@@ -646,6 +649,7 @@ body {
   <div id="shop-body">
     <div class="shop-sec"><h3>🃏 小丑牌</h3><div class="shop-items" id="shop-jokers"></div></div>
     <div class="shop-sec"><h3>🪐 行星牌（升级牌型）</h3><div class="shop-items" id="shop-planets"></div></div>
+    <div class="shop-sec"><h3>🎫 凭证（永久升级）</h3><div class="shop-items" id="shop-vouchers"></div></div>
   </div>
 </div>
 
@@ -764,7 +768,95 @@ const JOKER_DEFS = [
    apply(h,g){return ['STRAIGHT','STRAIGHT_FLUSH'].includes(h.type)?{ac:100}:{};}},
   {id:'J17',sym:'◇',col:'#6020a0',name:'灵巧小丑',cost:4,desc:'含同花时：+80 筹码',
    apply(h,g){return ['FLUSH','STRAIGHT_FLUSH'].includes(h.type)?{ac:80}:{};}},
+  // ── Per-card effect jokers ──
+  {id:'J18',sym:'Φ',col:'#a06018',name:'斐波那契',cost:8,desc:'打出的A/2/3/5/8各获得+8倍率',
+   perCard(c){return ['A','2','3','5','8'].includes(c.rank)?{am:8}:{};}},
+  {id:'J19',sym:'☠',col:'#902020',name:'恐怖脸',cost:4,desc:'打出的花牌(J/Q/K)各获得+30筹码',
+   perCard(c){return ['J','Q','K'].includes(c.rank)?{ac:30}:{};}},
+  {id:'J20',sym:'½',col:'#187040',name:'双数小丑',cost:5,desc:'打出的偶数牌各获得+4倍率',
+   perCard(c){const n=parseInt(c.rank);return(!isNaN(n)&&n%2===0)?{am:4}:{};}},
+  {id:'J21',sym:'⅓',col:'#704018',name:'奇数小丑',cost:5,desc:'打出的奇数牌各获得+31筹码',
+   perCard(c){const n=parseInt(c.rank);return(!isNaN(n)&&n%2===1)?{ac:31}:{};}},
+  {id:'J22',sym:'Σ',col:'#a0a010',name:'学者',cost:6,desc:'打出的A各获得+20筹码+4倍率',
+   perCard(c){return c.rank==='A'?{ac:20,am:4}:{};}},
+  {id:'J23',sym:'♔',col:'#702080',name:'特里布雷特',cost:9,desc:'打出的Q和K各获得×2倍率',
+   perCard(c){return ['Q','K'].includes(c.rank)?{xm:2}:{};}},
+  // ── Dynamic state jokers (jd.val) ──
+  {id:'J24',sym:'✦',col:'#1850a0',name:'超新星',cost:5,desc:'将本手型本局累计出牌次数加入倍率',dynamic:true,initVal:0,
+   apply(h,g,j){const c=(g.handTypeCounts||{})[h.type]||0;return c>0?{am:c}:{};}},
+  {id:'J25',sym:'$',col:'#208040',name:'靴带',cost:6,desc:'每持有$5获得+2倍率',
+   apply(h,g,j){const c=Math.floor(g.money/5);return c>0?{am:c*2}:{};}},
+  {id:'J26',sym:'↑↓',col:'#18a038',name:'绿色小丑',cost:4,desc:'每次弃牌+1倍率，每次出牌-1倍率（可为负）',dynamic:true,initVal:0,
+   apply(h,g,j){const v=j.val||0;return v!==0?{am:v}:{};}},
+  {id:'J27',sym:'✧',col:'#1878a8',name:'星座小丑',cost:6,desc:'每次购买行星牌积累+0.1倍率',dynamic:true,initVal:0,
+   apply(h,g,j){const v=+(j.val||0).toFixed(1);return v>0?{am:v}:{};}},
+  {id:'J28',sym:'►',col:'#a06010',name:'骑车小丑',cost:6,desc:'连续打出高牌积累+1倍率，含对子以上重置为0',dynamic:true,initVal:0,
+   apply(h,g,j){const v=j.val||0;return v>0?{am:v}:{};}},
+  {id:'J29',sym:'❋',col:'#c040a0',name:'冰淇淋',cost:6,desc:'初始+100筹码，每出一手-5筹码',dynamic:true,initVal:100,
+   apply(h,g,j){const v=j.val||0;return v>0?{ac:v}:{};}},
+  {id:'J30',sym:'▲',col:'#c08010',name:'爆米花',cost:5,desc:'初始+20倍率，每过一关-4倍率（耗尽后消失）',dynamic:true,initVal:20,
+   apply(h,g,j){const v=j.val||0;return v>0?{am:v}:{};}},
+  {id:'J31',sym:'□',col:'#204058',name:'蓝图',cost:10,desc:'复制右侧小丑的效果',
+   apply(h,g,j){
+     const idx=g.jokers.indexOf(j);
+     if(idx<0||idx>=g.jokers.length-1)return{};
+     const nxt=g.jokers[idx+1];
+     const nDef=JOKER_DEFS.find(d=>d.id===nxt.id);
+     if(!nDef||nDef.retrigger||nDef.perCard)return{};
+     return nDef.apply?nDef.apply(h,g,nxt):{};
+   }},
+  {id:'J32',sym:'⊞',col:'#186030',name:'方块小丑',cost:4,desc:'恰好打出4张牌时：+20筹码',
+   apply(h,g,j){return h.n===4?{ac:20}:{};}},
+  {id:'J33',sym:'⊙',col:'#602080',name:'独行侠',cost:5,desc:'作为唯一小丑时：×3倍率',
+   apply(h,g,j){return g.jokers.length===1?{xm:3}:{};}},
+  // ── Retrigger jokers ──
+  {id:'J34',sym:'⚡',col:'#186830',name:'黑客',cost:6,desc:'打出的2/3/4/5各重复计分一次',
+   retrigger(c){return ['2','3','4','5'].includes(c.rank)?1:0;}},
+  {id:'J35',sym:'↺',col:'#800028',name:'网球袜',cost:6,desc:'打出的J/Q/K各重复计分一次',
+   retrigger(c){return ['J','Q','K'].includes(c.rank)?1:0;}},
+  {id:'J36',sym:'☽',col:'#280868',name:'黄昏',cost:5,desc:'每轮最后一手出牌，所有牌重复计分一次',
+   retrigger(c,hr,g){return g.handsLeft===0?1:0;}},
+  {id:'J37',sym:'⊕',col:'#186880',name:'晾衣夹',cost:5,desc:'第一张打出的牌额外重复计分2次',
+   retrigger(c,hr,g,j,idx){return idx===0?2:0;}},
+  {id:'J38',sym:'∿',col:'#103878',name:'气泡水',cost:7,desc:'所有打出的牌各重复计分一次，共10次出牌后消失',dynamic:true,initVal:10,
+   retrigger(c,hr,g,j){return(j.val||0)>0?1:0;}},
 ];
+
+// =============================================
+// VOUCHER DEFS
+// =============================================
+// Each voucher: {id, name, cost, desc, unlocks?, apply(g)}
+const VOUCHER_DEFS = [
+  {id:'V01',name:'过剩库存',cost:10,desc:'商店多展示1张小丑牌',unlocks:'V02',
+   apply(g){g.voucherEffects.extraShopJokers=(g.voucherEffects.extraShopJokers||0)+1;}},
+  {id:'V02',name:'过剩库存+',cost:10,desc:'商店再多展示1张小丑牌（叠加）',
+   apply(g){g.voucherEffects.extraShopJokers=(g.voucherEffects.extraShopJokers||0)+1;}},
+  {id:'V03',name:'清仓特卖',cost:10,desc:'商店所有商品价格-$1',unlocks:'V04',
+   apply(g){g.voucherEffects.discount=(g.voucherEffects.discount||0)+1;}},
+  {id:'V04',name:'清空',cost:10,desc:'商店所有商品价格再-$1（叠加）',
+   apply(g){g.voucherEffects.discount=(g.voucherEffects.discount||0)+1;}},
+  {id:'V05',name:'行星商人',cost:10,desc:'商店保证出现2张行星牌',unlocks:'V06',
+   apply(g){g.voucherEffects.extraPlanets=(g.voucherEffects.extraPlanets||0)+1;}},
+  {id:'V06',name:'行星大亨',cost:10,desc:'行星牌价格-$1',
+   apply(g){g.voucherEffects.planetDiscount=(g.voucherEffects.planetDiscount||0)+1;}},
+  {id:'V07',name:'反物质',cost:10,desc:'+1 小丑栏位（永久）',
+   apply(g){g.jokerSlots=(g.jokerSlots||5)+1;}},
+];
+
+function getAvailableVoucher(g){
+  // Return one voucher available for this shop visit:
+  // base unlocked by default; upgrade unlocked if its prerequisite is bought
+  for(const v of VOUCHER_DEFS){
+    if(g.boughtVouchers.has(v.id)) continue;
+    // Check if it's a base (no one unlocks it) or its predecessor was bought
+    const isBase = !VOUCHER_DEFS.some(x=>x.unlocks===v.id);
+    const unlockedBy = VOUCHER_DEFS.find(x=>x.unlocks===v.id);
+    if(isBase || (unlockedBy && g.boughtVouchers.has(unlockedBy.id))){
+      return v;
+    }
+  }
+  return null;
+}
 
 // =============================================
 // CARD & DECK
@@ -860,6 +952,8 @@ const G = {
   jokers:[], handLevels:{}, handsPlayed:0,
   deck:null, hand:[], bossEffect:null, bossDebuffSuit:null,
   playedTypes:[], shopItems:null,
+  handTypeCounts:{}, boughtVouchers:new Set(),
+  voucherEffects:{extraShopJokers:0, discount:0},
 
   getBase(type){
     const h=HTYPES[type];
@@ -886,27 +980,56 @@ const G = {
 };
 
 // =============================================
-// SCORE CALCULATION
+// SCORE CALCULATION (supports retrigger + per-card effects)
 // =============================================
 function calcScore(hr, selCards){
   const base=G.getBase(hr.type);
   let chips=base.bc, mult=base.bm;
   const log=[];
-  // ALL played cards contribute chips; hr.sc cards are highlighted, kickers are dimmer but still score
-  for(const card of selCards){
-    let cv=card.chips;
-    if(G.bossEffect==='HEAD'&&card.suit===G.bossDebuffSuit){
-      log.push({t:`${card.rank}${card.suit} (消除)`,kind:'chips',v:0,sfx:'筹码',cardRef:card});
-    } else {
-      log.push({t:`${card.rank}${card.suit}`,kind:'chips',v:cv,sfx:'筹码',cardRef:card});
-      chips+=cv;
-    }
-  }
-  let xMults=[];
+  const h={type:hr.type,cards:selCards,n:selCards.length,sc:hr.sc};
+
+  // Step 1: compute retrigger counts per card
+  const retrigMap=new Map(); // card → extra trigger count
   for(const j of G.jokers){
     const def=JOKER_DEFS.find(d=>d.id===j.id);
-    if(!def) continue;
-    const r=def.apply({type:hr.type,cards:selCards,n:selCards.length,sc:hr.sc},G);
+    if(!def?.retrigger) continue;
+    selCards.forEach((card,idx)=>{
+      const extra=def.retrigger(card,hr,G,j,idx);
+      if(extra>0) retrigMap.set(card,(retrigMap.get(card)||0)+extra);
+    });
+  }
+
+  // Step 2: score each card (with retriggering) + per-card joker effects
+  for(let ci=0;ci<selCards.length;ci++){
+    const card=selCards[ci];
+    const triggers=1+(retrigMap.get(card)||0);
+    const debuffed=G.bossEffect==='HEAD'&&card.suit===G.bossDebuffSuit;
+    for(let t=0;t<triggers;t++){
+      const suf=t>0?' ↺':'';
+      if(debuffed){
+        log.push({t:`${card.rank}${card.suit}${suf}(消除)`,kind:'chips',v:0,sfx:'筹码',cardRef:card,retrig:t>0});
+      } else {
+        log.push({t:`${card.rank}${card.suit}${suf}`,kind:'chips',v:card.chips,sfx:'筹码',cardRef:card,retrig:t>0});
+        chips+=card.chips;
+      }
+      // per-card joker effects also retrigger
+      for(const j of G.jokers){
+        const def=JOKER_DEFS.find(d=>d.id===j.id);
+        if(!def?.perCard) continue;
+        const r=def.perCard(card,hr,G);
+        if(r.ac){chips+=r.ac; log.push({t:def.name+suf,kind:'chips',v:r.ac,sfx:'筹码',jokerRef:def.id,retrig:t>0});}
+        if(r.am){mult+=r.am;  log.push({t:def.name+suf,kind:'mult',v:r.am,sfx:'倍率',jokerRef:def.id,retrig:t>0});}
+        if(r.xm){mult=+(mult*r.xm).toFixed(1); log.push({t:def.name+suf,kind:'xmult',v:r.xm,sfx:'×倍率',jokerRef:def.id,retrig:t>0});}
+      }
+    }
+  }
+
+  // Step 3: hand-level jokers (no retrigger)
+  const xMults=[];
+  for(const j of G.jokers){
+    const def=JOKER_DEFS.find(d=>d.id===j.id);
+    if(!def||def.retrigger||def.perCard) continue;
+    const r=def.apply(h,G,j);
     if(r.ac){chips+=r.ac; log.push({t:def.name,kind:'chips',v:r.ac,sfx:'筹码',jokerRef:def.id});}
     if(r.am){mult+=r.am;  log.push({t:def.name,kind:'mult',v:r.am,sfx:'倍率',jokerRef:def.id});}
     if(r.xm) xMults.push({name:def.name,v:r.xm,id:def.id});
@@ -925,9 +1048,15 @@ function genShop(){
   const owned=new Set(G.jokers.map(j=>j.id));
   const avail=JOKER_DEFS.filter(j=>!owned.has(j.id)).sort(()=>Math.random()-0.5);
   const planets=[...PLANET_DEFS].sort(()=>Math.random()-0.5);
+  const discount=G.voucherEffects?.discount||0;
+  const extraJ=(G.voucherEffects?.extraShopJokers||0);
+  const extraP=(G.voucherEffects?.extraPlanets||0);
+  const numPlanets=Math.min(PLANET_DEFS.length, 2+extraP);
+  const planetDiscount=(G.voucherEffects?.planetDiscount||0);
   G.shopItems={
-    jokers:avail.slice(0,2).map(j=>({...j,sold:false})),
-    planets:planets.slice(0,2).map(p=>({...p,sold:false,cost:3}))
+    jokers:avail.slice(0,2+extraJ).map(j=>({...j,sold:false,cost:Math.max(1,j.cost-discount)})),
+    planets:planets.slice(0,numPlanets).map(p=>({...p,sold:false,cost:Math.max(1,3-discount-planetDiscount)})),
+    voucher: getAvailableVoucher(G) ? {...getAvailableVoucher(G), sold:false, cost:Math.max(1,10-discount)} : null
   };
 }
 
@@ -1012,7 +1141,8 @@ function renderJokers(){
 }
 
 function openJokerDetail(def){
-  document.getElementById('jd-emoji').textContent=def.emoji;
+  const el=document.getElementById('jd-emoji');
+  if(el){ el.textContent=''; el.style.setProperty('--jcol',def.col||'#ffd700'); el.textContent=def.sym||'?'; }
   document.getElementById('jd-name').textContent=def.name;
   document.getElementById('jd-desc').textContent=def.desc;
   document.getElementById('joker-detail').style.display='flex';
@@ -1146,13 +1276,47 @@ function renderShopItems(){
     if(!item.sold&&!noMoney) el.addEventListener('click',()=>buyPlanet(item));
     pc.appendChild(el);
   }
+  // Voucher section
+  const vc=document.getElementById('shop-vouchers');
+  if(vc){
+    vc.innerHTML='';
+    const v=G.shopItems?.voucher;
+    if(v&&!v.sold){
+      const noMoney=G.money<v.cost;
+      const el=document.createElement('div');
+      el.className='shop-item'+(noMoney?' cant-afford':'');
+      el.innerHTML=`<span class="badge badge-v">凭证</span><div class="iname">${v.name}</div><div class="idesc">${v.desc}</div><div class="icost">${noMoney?'💰不足':'$'+v.cost}</div>`;
+      if(!noMoney) el.addEventListener('click',()=>buyVoucher(v));
+      vc.appendChild(el);
+    } else {
+      const el=document.createElement('div');
+      el.className='shop-item sold';
+      el.innerHTML=`<span class="badge badge-v">凭证</span><div class="iname">本轮无凭证</div><div class="idesc">已购买或无可用凭证</div><div class="icost">—</div>`;
+      vc.appendChild(el);
+    }
+  }
   const rc=G.shopRerollCost||5;
   document.getElementById('btn-reroll').textContent=`重置商品 ($${rc})`;
   document.getElementById('btn-reroll').disabled=G.money<rc;
 }
 
+function buyVoucher(v){
+  if(G.money<v.cost||G.boughtVouchers.has(v.id)) return;
+  G.money-=v.cost;
+  G.boughtVouchers.add(v.id);
+  v.sold=true;
+  v.apply(G); // apply permanent effect immediately
+  saveGame(); renderShopItems();
+}
+
 function buyJoker(item){
   openJokerConfirm(item);
+}
+function confirmBuyJokerItem(item){
+  const def=JOKER_DEFS.find(d=>d.id===item.id);
+  const entry={id:item.id};
+  if(def?.dynamic) entry.val=def.initVal??0;
+  G.jokers.push(entry);
 }
 let _pendingJoker = null;
 let _pendingPlanet = null;
@@ -1202,6 +1366,9 @@ function saveGame() {
       jokers: G.jokers, handLevels: G.handLevels, handsPlayed: G.handsPlayed,
       bossEffect: G.bossEffect, bossDebuffSuit: G.bossDebuffSuit,
       playedTypes: G.playedTypes, state: G.state,
+      handTypeCounts: G.handTypeCounts||{},
+      boughtVouchers: [...(G.boughtVouchers||[])],
+      voucherEffects: G.voucherEffects||{},
       hand: G.hand ? G.hand.map(c=>({suit:c.suit,rank:c.rank})) : [],
       deck: G.deck ? G.deck.pile.map(c=>({suit:c.suit,rank:c.rank})) : [],
     };
@@ -1224,6 +1391,9 @@ function loadGame() {
       handsPlayed: s.handsPlayed || 0,
       bossEffect: s.bossEffect || null, bossDebuffSuit: s.bossDebuffSuit || null,
       playedTypes: s.playedTypes || [], state: s.state,
+      handTypeCounts: s.handTypeCounts||{},
+      boughtVouchers: new Set(s.boughtVouchers||[]),
+      voucherEffects: s.voucherEffects||{extraShopJokers:0,discount:0},
     });
     G.hand = (s.hand||[]).map(c=>new Card(c.suit,c.rank));
     // Restore deck (remaining cards)
@@ -1348,10 +1518,23 @@ async function animatePlay(hr, sr, selCards) {
 
   // 5. Animate each log entry (card chips + joker effects)
   for(const entry of sr.log) {
-    await sleep(550);
+    await sleep(entry.retrig ? 320 : 550); // retrigger entries are faster
     if(entry.cardRef) {
       const w = wraps.find(x=>x.card===entry.cardRef);
-      if(w) chipFloat(w.wrap, entry.v, 'chips');
+      if(w){
+        if(entry.retrig){
+          // Pulse the card to visually show retrigger
+          const cardEl = w.wrap.querySelector('.card');
+          if(cardEl){
+            cardEl.classList.remove('retrig-pulse');
+            void cardEl.offsetWidth; // reflow to restart animation
+            cardEl.classList.add('retrig-pulse');
+            setTimeout(()=>cardEl.classList.remove('retrig-pulse'), 400);
+          }
+          await sleep(180);
+        }
+        if(entry.v>0) chipFloat(w.wrap, entry.v, 'chips');
+      }
     } else if(entry.jokerRef) {
       // Float above the specific joker card in joker area
       const jokerIdx = G.jokers.findIndex(j=>j.id===entry.jokerRef);
@@ -1432,6 +1615,7 @@ async function playHand(){
   G.handsPlayed++;
   G.handsLeft--;
   G.state = 'SCORING';
+  G._lastHR = hr;
   if(G.bossEffect==='EYE') G.playedTypes.push(hr.type);
   const sr = calcScore(hr, sel);
   G.score += sr.total;
@@ -1443,6 +1627,25 @@ function afterScoring(){
   document.getElementById('scoring-overlay').classList.remove('on');
   document.getElementById('play-zone').classList.remove('active');
 
+  // Dynamic joker post-hand updates
+  const lastType = G._lastHR?.type;
+  G.handTypeCounts = G.handTypeCounts||{};
+  if(lastType) G.handTypeCounts[lastType]=(G.handTypeCounts[lastType]||0)+1;
+  const toRemove=[];
+  for(const j of G.jokers){
+    if(j.id==='J26') j.val=(j.val||0)-1;   // Green: -1 per hand
+    if(j.id==='J28'){                         // Ride the Bus: +1 on HIGH_CARD, reset else
+      if(lastType==='HIGH_CARD') j.val=(j.val||0)+1;
+      else j.val=0;
+    }
+    if(j.id==='J29') j.val=Math.max(0,(j.val||0)-5);  // Ice Cream: -5 chips per hand
+    if(j.id==='J38'){                                   // Seltzer: -1 use, destroy at 0
+      j.val=(j.val||10)-1;
+      if(j.val<=0) toRemove.push(j);
+    }
+  }
+  G.jokers=G.jokers.filter(j=>!toRemove.includes(j));
+
   const sel = G.hand.filter(c=>c.sel);
   G.hand = G.hand.filter(c=>!c.sel);
   const newCards = G.deck.deal(sel.length);
@@ -1450,6 +1653,12 @@ function afterScoring(){
   G.hand.forEach(c=>c.sel=false);
 
   if(G.score>=G.target){
+    // Popcorn: -4 mult per round won, destroy at 0
+    const popcornIdx=G.jokers.findIndex(j=>j.id==='J30');
+    if(popcornIdx>=0){
+      G.jokers[popcornIdx].val=Math.max(0,(G.jokers[popcornIdx].val||20)-4);
+      if(G.jokers[popcornIdx].val===0) G.jokers.splice(popcornIdx,1);
+    }
     const interest = Math.min(5, Math.floor(G.money/5));
     const blindBonus = [3,4,5][G.blind]; // Small=$3, Big=$4, Boss=$5
     G.money += blindBonus + G.handsLeft + interest;
@@ -1504,6 +1713,8 @@ async function discard(){
   await sleep(220);
 
   G.discardsLeft--;
+  // Green Joker: +1 Mult per discard
+  for(const j of G.jokers){ if(j.id==='J26') j.val=(j.val||0)+1; }
   G.hand = G.hand.filter(c=>!c.sel);
   const newCards = G.deck.deal(sel.length);
   G.hand.push(...newCards);
@@ -1526,7 +1737,8 @@ function startWithDifficulty(d) {
     money:diff.money, handsLeft:diff.hands, discardsLeft:diff.discards,
     jokerSlots:5, shopRerollCost:5,
     jokers:[], handLevels:{}, handsPlayed:0, deck:null, hand:[],
-    bossEffect:null, bossDebuffSuit:null, playedTypes:[], shopItems:null
+    bossEffect:null, bossDebuffSuit:null, playedTypes:[], shopItems:null,
+    handTypeCounts:{}, boughtVouchers:new Set(), voucherEffects:{extraShopJokers:0,discount:0}
   });
   renderBlindSelect();
 }
@@ -1583,7 +1795,7 @@ document.getElementById('jc-buy').addEventListener('click',()=>{
   const item=_pendingJoker; _pendingJoker=null;
   document.getElementById('joker-confirm').style.display='none';
   if(G.money<item.cost||G.jokers.length>=(G.jokerSlots||5)) return;
-  G.money-=item.cost; G.jokers.push({id:item.id}); item.sold=true;
+  G.money-=item.cost; confirmBuyJokerItem(item); item.sold=true;
   saveGame(); renderShopItems();
 });
 document.getElementById('joker-confirm').addEventListener('click',e=>{
@@ -1601,6 +1813,8 @@ document.getElementById('pc-buy').addEventListener('click',()=>{
   document.getElementById('planet-confirm').style.display='none';
   if(G.money<item.cost) return;
   G.money-=item.cost; G.handLevels[item.hand]=(G.handLevels[item.hand]||1)+1; item.sold=true;
+  // Constellation: +0.1 Mult per planet bought
+  for(const j of G.jokers){ if(j.id==='J27') j.val=+((j.val||0)+0.1).toFixed(1); }
   saveGame(); renderShopItems(); renderHandLevels();
 });
 document.getElementById('planet-confirm').addEventListener('click',e=>{
