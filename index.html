@@ -81,7 +81,7 @@ body {
 
 /* JOKER AREA */
 #joker-area { background:rgba(0,0,0,0.2); padding:8px 16px; display:flex; align-items:center; gap:8px; border-bottom:1px solid #2a2a4a; min-height:82px; flex-shrink:0; }
-#joker-area .jlbl { color:#887733; font-size:12px; margin-right:4px; white-space:nowrap; }
+#joker-area .jlbl { color:#887733; font-size:11px; white-space:nowrap; display:inline-block; width:50px; min-width:50px; flex-shrink:0; }
 #joker-slots { display:flex; gap:8px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:2px; min-width:0; }
 .joker-card {
   border:2px solid var(--jcol,#ffd700); border-radius:9px;
@@ -247,8 +247,8 @@ body {
 .anim-pz-exit { animation:pzExit     0.2s  ease-in  forwards; }
 
 /* Chip float above cards */
-@keyframes floatUp { 0%{transform:translateX(-50%) translateY(0) scale(0.6);opacity:0} 12%{opacity:1;transform:translateX(-50%) translateY(-6px) scale(1.1)} 70%{opacity:1;transform:translateX(-50%) translateY(-28px) scale(1)} 100%{opacity:0;transform:translateX(-50%) translateY(-42px) scale(0.9)} }
-.chip-float { position:absolute; top:0; left:50%; transform:translateX(-50%); font-size:12px; font-weight:bold; white-space:nowrap; pointer-events:none; animation:floatUp 1.2s ease-out forwards; z-index:20; }
+@keyframes floatUp { 0%{transform:translateX(-50%) translateY(0) scale(0.6);opacity:0} 15%{opacity:1;transform:translateX(-50%) translateY(-12px) scale(1.1)} 70%{opacity:1;transform:translateX(-50%) translateY(-52px) scale(1)} 100%{opacity:0;transform:translateX(-50%) translateY(-70px) scale(0.9)} }
+.chip-float { position:absolute; bottom:4px; top:auto; left:50%; transform:translateX(-50%); font-size:12px; font-weight:bold; white-space:nowrap; pointer-events:none; animation:floatUp 1.2s ease-out forwards; z-index:20; }
 .cf-chips { color:#4daaff; text-shadow:0 0 8px rgba(77,170,255,0.9); }
 .cf-mult  { color:#ff7755; text-shadow:0 0 8px rgba(255,119,85,0.9); }
 .cf-xmult { color:#ff55ff; text-shadow:0 0 8px rgba(255,85,255,0.9); }
@@ -294,13 +294,13 @@ body {
   #boss-banner { font-size:10px; padding:4px 8px; }
 
   /* Joker area: compact, horizontal scroll, shorter */
-  #joker-area { min-height:60px; max-height:60px; padding:5px 8px; overflow-x:auto; overflow-y:hidden; flex-wrap:nowrap; flex-shrink:0; }
+  #joker-area { min-height:70px; max-height:70px; padding:7px 8px; overflow-x:auto; overflow-y:visible; flex-wrap:nowrap; flex-shrink:0; }
   #joker-area .jlbl { font-size:11px; }
   .joker-card { width:38px; min-width:38px; height:54px; border-radius:7px; }
   .joker-card .j-face { font-size:17px; border-radius:5px 5px 0 0; }
   .joker-card .j-name { font-size:6px; height:16px; }
   .joker-slot { width:38px; min-width:38px; height:54px; border-radius:7px; font-size:14px; }
-  #joker-area { min-height:60px; max-height:60px; }
+  #joker-area { min-height:70px; max-height:70px; }
 
   /* Hand type display: compact */
   #hand-type-display { font-size:15px; padding:3px; min-height:28px; flex-shrink:0; }
@@ -431,8 +431,8 @@ body {
     <span class="jlbl">🃏 小丑：</span>
     <div id="joker-slots"></div>
   </div>
-  <div id="handlv-area" style="display:none;background:rgba(0,0,0,0.15);padding:5px 16px;border-bottom:1px solid #1e1e3a;min-height:44px;overflow-x:auto;white-space:nowrap;">
-    <span style="color:#4488aa;font-size:11px;margin-right:6px;">🪐 升级：</span>
+  <div id="handlv-area" style="display:none;background:rgba(0,0,0,0.15);padding:5px 16px;border-bottom:1px solid #1e1e3a;min-height:44px;overflow-x:auto;white-space:nowrap;align-items:center;">
+    <span style="color:#4488aa;font-size:11px;display:inline-block;width:50px;min-width:50px;flex-shrink:0;">🪐 升级：</span>
     <span id="handlv-slots"></span>
   </div>
   <!-- PLAY ZONE: shows during scoring animation -->
@@ -946,7 +946,7 @@ function renderHandLevels(){
   slots.innerHTML = '';
   const upgraded = Object.entries(G.handLevels).filter(([k,v])=>v>1);
   if(upgraded.length===0){ area.style.display='none'; return; }
-  area.style.display='block';
+  area.style.display='flex';
   for(const [type, lv] of upgraded){
     const ht = HTYPES[type];
     if(!ht) continue;
