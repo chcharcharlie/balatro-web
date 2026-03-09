@@ -82,10 +82,20 @@ body {
 /* JOKER AREA */
 #joker-area { background:rgba(0,0,0,0.2); padding:8px 16px; display:flex; align-items:center; gap:8px; border-bottom:1px solid #2a2a4a; min-height:82px; flex-shrink:0; }
 #joker-area .jlbl { color:#887733; font-size:12px; margin-right:4px; white-space:nowrap; }
-#joker-slots { display:flex; gap:8px; flex-wrap:wrap; }
-.joker-card { background:linear-gradient(135deg,#2a1a00,#1a1200); border:2px solid #ffd700; border-radius:8px; padding:6px 10px; min-width:88px; max-width:108px; position:relative; overflow:visible; }
-.joker-card .jname { color:#ffd700; font-weight:bold; font-size:11px; margin-bottom:3px; }
-.joker-card .jdesc { color:#ccaa44; font-size:9px; line-height:1.3; }
+#joker-slots { display:flex; gap:8px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:2px; min-width:0; }
+.joker-card {
+  background:linear-gradient(160deg,#2e1c00,#1a0e00,#2e1c00);
+  border:2px solid #ffd700; border-radius:9px;
+  width:56px; min-width:56px; height:78px;
+  display:flex; flex-direction:column; align-items:center; justify-content:space-between;
+  padding:6px 4px 5px; cursor:pointer; position:relative; overflow:visible;
+  transition:transform 0.15s, box-shadow 0.15s; flex-shrink:0;
+}
+.joker-card:hover { transform:translateY(-4px) scale(1.05); box-shadow:0 6px 20px rgba(255,215,0,0.35); }
+.joker-card:active { transform:scale(0.96); }
+.joker-card .j-corner { font-size:9px; color:#ffd700; font-weight:bold; align-self:flex-start; line-height:1; }
+.joker-card .j-emoji { font-size:26px; flex:1; display:flex; align-items:center; }
+.joker-card .j-name { font-size:8px; color:#ffe88a; font-weight:bold; text-align:center; line-height:1.2; word-break:keep-all; }
 .joker-slot { background:rgba(255,215,0,0.04); border:2px dashed #443300; border-radius:8px; width:88px; height:66px; display:flex; align-items:center; justify-content:center; color:#443300; font-size:22px; }
 
 /* HAND TYPE */
@@ -282,9 +292,9 @@ body {
   /* Joker area: compact, horizontal scroll, shorter */
   #joker-area { min-height:60px; max-height:60px; padding:5px 8px; overflow-x:auto; overflow-y:hidden; flex-wrap:nowrap; flex-shrink:0; }
   #joker-area .jlbl { font-size:11px; }
-  .joker-card { min-width:72px; max-width:84px; padding:4px 7px; flex-shrink:0; }
-  .joker-card .jname { font-size:10px; margin-bottom:2px; }
-  .joker-card .jdesc { font-size:8px; }
+  .joker-card { width:48px; min-width:48px; height:66px; padding:4px 3px; border-radius:7px; }
+  .joker-card .j-emoji { font-size:22px; }
+  .joker-card .j-name { font-size:7px; }
   .joker-slot { width:60px; height:50px; font-size:16px; flex-shrink:0; }
 
   /* Hand type display: compact */
@@ -452,6 +462,16 @@ body {
     <span class="ht-chips" id="ht-chips"></span> 筹码 × <span class="ht-mult" id="ht-mult"></span> 倍率
   </div>
   <div class="ht-lv" id="ht-lv"></div>
+</div>
+
+<!-- JOKER DETAIL POPUP -->
+<div id="joker-detail" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:360;align-items:center;justify-content:center;">
+  <div style="background:#1a1200;border:2px solid #ffd700;border-radius:16px;padding:24px;width:84%;max-width:300px;text-align:center;">
+    <div id="jd-emoji" style="font-size:52px;margin-bottom:10px;"></div>
+    <div id="jd-name" style="font-size:20px;font-weight:bold;color:#ffd700;margin-bottom:10px;"></div>
+    <div id="jd-desc" style="font-size:13px;color:#ccaa44;line-height:1.6;background:rgba(255,215,0,0.07);border-radius:10px;padding:12px;margin-bottom:16px;"></div>
+    <button class="btn" id="jd-close" style="background:rgba(255,215,0,0.1);color:#ffd700;border:1px solid #ffd70055;">关闭</button>
+  </div>
 </div>
 
 <!-- JOKER CONFIRM -->
@@ -682,39 +702,39 @@ const PLANET_DEFS = [
 ];
 
 const JOKER_DEFS = [
-  {id:'J01',name:'快乐小丑',cost:3,desc:'含一对时：+8 倍率',
+  {id:'J01',emoji:'😄',name:'快乐小丑',cost:3,desc:'含一对时：+8 倍率',
    apply(h,g){return ['PAIR','TWO_PAIR','FULL_HOUSE'].includes(h.type)?{am:8}:{};}},
-  {id:'J02',name:'疯狂小丑',cost:3,desc:'含三条时：+12 倍率',
+  {id:'J02',emoji:'😜',name:'疯狂小丑',cost:3,desc:'含三条时：+12 倍率',
    apply(h,g){return ['THREE_OF_A_KIND','FULL_HOUSE','FOUR_OF_A_KIND'].includes(h.type)?{am:12}:{};}},
-  {id:'J03',name:'愤怒小丑',cost:3,desc:'含两对时：+10 倍率',
+  {id:'J03',emoji:'😤',name:'愤怒小丑',cost:3,desc:'含两对时：+10 倍率',
    apply(h,g){return ['TWO_PAIR','FULL_HOUSE'].includes(h.type)?{am:10}:{};}},
-  {id:'J04',name:'古怪小丑',cost:3,desc:'含顺子时：+12 倍率',
+  {id:'J04',emoji:'🎯',name:'古怪小丑',cost:3,desc:'含顺子时：+12 倍率',
    apply(h,g){return ['STRAIGHT','STRAIGHT_FLUSH'].includes(h.type)?{am:12}:{};}},
-  {id:'J05',name:'滑稽小丑',cost:3,desc:'含同花时：+10 倍率',
+  {id:'J05',emoji:'🌸',name:'滑稽小丑',cost:3,desc:'含同花时：+10 倍率',
    apply(h,g){return ['FLUSH','STRAIGHT_FLUSH'].includes(h.type)?{am:10}:{};}},
-  {id:'J06',name:'狡猾小丑',cost:4,desc:'含一对时：+50 筹码',
+  {id:'J06',emoji:'💰',name:'狡猾小丑',cost:4,desc:'含一对时：+50 筹码',
    apply(h,g){return ['PAIR','TWO_PAIR','FULL_HOUSE'].includes(h.type)?{ac:50}:{};}},
-  {id:'J07',name:'半个小丑',cost:5,desc:'出牌≤3张：+20 倍率',
+  {id:'J07',emoji:'✌️',name:'半个小丑',cost:5,desc:'出牌≤3张：+20 倍率',
    apply(h,g){return h.n<=3?{am:20}:{};}},
-  {id:'J08',name:'横幅',cost:5,desc:'每剩余1次弃牌：+30 筹码',
+  {id:'J08',emoji:'🏴',name:'横幅',cost:5,desc:'每剩余1次弃牌：+30 筹码',
    apply(h,g){return {ac:g.discardsLeft*30};}},
-  {id:'J09',name:'神秘巅峰',cost:5,desc:'弃牌次数为0时：+15 倍率',
+  {id:'J09',emoji:'🌙',name:'神秘巅峰',cost:5,desc:'弃牌次数为0时：+15 倍率',
    apply(h,g){return g.discardsLeft===0?{am:15}:{};}},
-  {id:'J10',name:'印错牌',cost:4,desc:'随机 +0~23 倍率',
+  {id:'J10',emoji:'🎲',name:'印错牌',cost:4,desc:'随机 +0~23 倍率',
    apply(h,g){return {am:Math.floor(Math.random()*24)};}},
-  {id:'J11',name:'忠诚卡',cost:5,desc:'每出6次牌：×4 倍率',
+  {id:'J11',emoji:'🤜',name:'忠诚卡',cost:5,desc:'每出6次牌：×4 倍率',
    apply(h,g){return (g.handsPlayed>0&&g.handsPlayed%6===0)?{xm:4}:{};}},
-  {id:'J12',name:'举拳头',cost:5,desc:'最低点数×2 作为+倍率',
+  {id:'J12',emoji:'✊',name:'举拳头',cost:5,desc:'最低点数×2 作为+倍率',
    apply(h,g){
      if(!h.cards||h.cards.length===0) return {};
      const min=Math.min(...h.cards.map(c=>RANK_ORD[c.rank]));
      return {am:min*2};
    }},
-  {id:'J13',name:'小丑模板',cost:8,desc:'每个空槽：×1 额外倍率',
+  {id:'J13',emoji:'📋',name:'小丑模板',cost:8,desc:'每个空槽：×1 额外倍率',
    apply(h,g){const e=4-g.jokers.length; return e>0?{xm:1+e}:{};}},
-  {id:'J14',name:'聪明小丑',cost:4,desc:'含两对时：+80 筹码',
+  {id:'J14',emoji:'🧠',name:'聪明小丑',cost:4,desc:'含两对时：+80 筹码',
    apply(h,g){return ['TWO_PAIR','FULL_HOUSE'].includes(h.type)?{ac:80}:{};}},
-  {id:'J15',name:'狡野小丑',cost:5,desc:'含三条时：+100 筹码',
+  {id:'J15',emoji:'🦁',name:'狡野小丑',cost:5,desc:'含三条时：+100 筹码',
    apply(h,g){return ['THREE_OF_A_KIND','FULL_HOUSE','FOUR_OF_A_KIND'].includes(h.type)?{ac:100}:{};}},
 ];
 
@@ -807,8 +827,8 @@ function evalHand(cards){
 // =============================================
 const G = {
   state:'DIFFICULTY', ante:1, blind:0, score:0, target:300,
-  difficulty:1,
-  money:4, handsLeft:3, discardsLeft:3,
+  difficulty:1, jokerSlots:4,
+  money:4, handsLeft:3, discardsLeft:3, shopRerollCost:5,
   jokers:[], handLevels:{}, handsPlayed:0,
   deck:null, hand:[], bossEffect:null, bossDebuffSuit:null,
   playedTypes:[], shopItems:null,
@@ -942,13 +962,16 @@ function showHandLvTooltip(e, name, chips, mult, lv){
 function renderJokers(){
   const c=document.getElementById('joker-slots');
   c.innerHTML='';
-  for(let i=0;i<4;i++){
+  const maxSlots = G.jokerSlots||4;
+  for(let i=0;i<maxSlots;i++){
     if(i<G.jokers.length){
       const j=G.jokers[i];
       const def=JOKER_DEFS.find(d=>d.id===j.id);
+      if(!def) continue;
       const el=document.createElement('div');
       el.className='joker-card pop-in';
-      el.innerHTML=`<div class="jname">${def.name}</div><div class="jdesc">${def.desc}</div>`;
+      el.innerHTML=`<div class="j-corner">🃏</div><div class="j-emoji">${def.emoji}</div><div class="j-name">${def.name}</div>`;
+      el.addEventListener('click',()=>openJokerDetail(def));
       c.appendChild(el);
     } else {
       const sl=document.createElement('div');
@@ -957,6 +980,13 @@ function renderJokers(){
       c.appendChild(sl);
     }
   }
+}
+
+function openJokerDetail(def){
+  document.getElementById('jd-emoji').textContent=def.emoji;
+  document.getElementById('jd-name').textContent=def.name;
+  document.getElementById('jd-desc').textContent=def.desc;
+  document.getElementById('joker-detail').style.display='flex';
 }
 
 function renderHand(){
@@ -1052,6 +1082,7 @@ function renderPlaying(){
 }
 
 function renderShop(){
+  G.shopRerollCost = 5; // reset cost when entering new shop
   genShop();
   document.getElementById('shop-money').textContent='$'+G.money;
   renderShopItems();
@@ -1086,7 +1117,9 @@ function renderShopItems(){
     if(!item.sold&&!noMoney) el.addEventListener('click',()=>buyPlanet(item));
     pc.appendChild(el);
   }
-  document.getElementById('btn-reroll').disabled=G.money<5;
+  const rc=G.shopRerollCost||5;
+  document.getElementById('btn-reroll').textContent=`重置商品 ($${rc})`;
+  document.getElementById('btn-reroll').disabled=G.money<rc;
 }
 
 function buyJoker(item){
@@ -1136,6 +1169,7 @@ function saveGame() {
     const s = {
       ante: G.ante, blind: G.blind, score: G.score, money: G.money,
       handsLeft: G.handsLeft, discardsLeft: G.discardsLeft, difficulty: G.difficulty??1,
+      jokerSlots: G.jokerSlots||4, shopRerollCost: G.shopRerollCost||5,
       jokers: G.jokers, handLevels: G.handLevels, handsPlayed: G.handsPlayed,
       bossEffect: G.bossEffect, bossDebuffSuit: G.bossDebuffSuit,
       playedTypes: G.playedTypes, state: G.state,
@@ -1156,6 +1190,7 @@ function loadGame() {
     Object.assign(G, {
       ante: s.ante, blind: s.blind, score: s.score, money: s.money,
       handsLeft: s.handsLeft, discardsLeft: s.discardsLeft, difficulty: s.difficulty??1,
+      jokerSlots: s.jokerSlots||4, shopRerollCost: s.shopRerollCost||5,
       jokers: s.jokers || [], handLevels: s.handLevels || {},
       handsPlayed: s.handsPlayed || 0,
       bossEffect: s.bossEffect || null, bossDebuffSuit: s.bossDebuffSuit || null,
@@ -1386,7 +1421,9 @@ function afterScoring(){
   G.hand.forEach(c=>c.sel=false);
 
   if(G.score>=G.target){
-    G.money += 3 + G.handsLeft;
+    const interest = Math.min(5, Math.floor(G.money/5));
+    const blindBonus = [3,4,5][G.blind]; // Small=$3, Big=$4, Boss=$5
+    G.money += blindBonus + G.handsLeft + interest;
     if(G.blind===2){
       if(G.ante>=8){
         G.state='GAME_WIN';
@@ -1487,12 +1524,27 @@ document.getElementById('btn-play').addEventListener('click',playHand);
 document.getElementById('btn-discard').addEventListener('click',discard);
 document.getElementById('btn-sco-continue').addEventListener('click',afterScoring);
 document.getElementById('btn-next-ante').addEventListener('click',()=>{ G.state='BLIND_SELECT'; renderBlindSelect(); });
-document.getElementById('btn-reroll').addEventListener('click',()=>{ if(G.money<5)return; G.money-=5; genShop(); renderShopItems(); });
+document.getElementById('btn-reroll').addEventListener('click',()=>{
+  const rc=G.shopRerollCost||5;
+  if(G.money<rc) return;
+  G.money-=rc;
+  G.shopRerollCost=rc+1; // each reroll costs +$1 more (Balatro rule)
+  genShop();
+  renderShopItems();
+});
 document.getElementById('btn-restart').addEventListener('click',restart);
 document.getElementById('btn-restart-win').addEventListener('click',restart);
 document.getElementById('btn-newgame').addEventListener('click',()=>{
   if(confirm('放弃当前游戏，重新开始？')) restart();
 });
+document.getElementById('jd-close').addEventListener('click',()=>{
+  document.getElementById('joker-detail').style.display='none';
+});
+document.getElementById('joker-detail').addEventListener('click',e=>{
+  if(e.target===document.getElementById('joker-detail'))
+    document.getElementById('joker-detail').style.display='none';
+});
+
 document.getElementById('jc-cancel').addEventListener('click',()=>{
   document.getElementById('joker-confirm').style.display='none'; _pendingJoker=null;
 });
