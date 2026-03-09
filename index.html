@@ -139,6 +139,33 @@ body {
 .badge-j { background:#332200; color:#ffaa00; border:1px solid #ffaa00; }
 .badge-p { background:#001833; color:#4488ff; border:1px solid #4488ff; }
 
+/* DIFFICULTY SELECT */
+#screen-difficulty { align-items:center; justify-content:center; gap:20px; flex-direction:column; }
+#screen-difficulty h1 { font-size:28px; font-weight:900; color:#ffd700; text-shadow:0 0 20px rgba(255,215,0,0.4); }
+#screen-difficulty p { font-size:13px; color:#8888aa; text-align:center; max-width:380px; }
+.diff-cards { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; max-width:600px; }
+.diff-card {
+  background:#12122a; border:2px solid #3a3a6a; border-radius:14px;
+  padding:18px 16px; width:130px; cursor:pointer;
+  transition:all 0.18s; text-align:center;
+}
+.diff-card:hover { transform:translateY(-4px); }
+.diff-card.diff-0 { border-color:#44ff88; }
+.diff-card.diff-0:hover { box-shadow:0 0 18px rgba(68,255,136,0.3); }
+.diff-card.diff-1 { border-color:#4488ff; }
+.diff-card.diff-1:hover { box-shadow:0 0 18px rgba(68,136,255,0.3); }
+.diff-card.diff-2 { border-color:#ff8844; }
+.diff-card.diff-2:hover { box-shadow:0 0 18px rgba(255,136,68,0.3); }
+.diff-card.diff-3 { border-color:#ff4444; }
+.diff-card.diff-3:hover { box-shadow:0 0 18px rgba(255,68,68,0.4); }
+.diff-emoji { font-size:32px; margin-bottom:8px; }
+.diff-name  { font-size:15px; font-weight:bold; color:#e0e0ff; margin-bottom:6px; }
+.diff-stake { font-size:10px; color:#8888aa; margin-bottom:10px; }
+.diff-stats { font-size:10px; line-height:1.7; color:#aaaacc; text-align:left; }
+.diff-stats span { display:block; }
+.ds-good { color:#44ff88; }
+.ds-bad  { color:#ff8866; }
+
 /* GAME OVER / WIN */
 #screen-gameover,#screen-win { align-items:center; justify-content:center; gap:20px; text-align:center; }
 #screen-gameover h1 { font-size:52px; color:#ff4444; }
@@ -289,6 +316,58 @@ body {
 </style>
 </head>
 <body>
+
+<!-- DIFFICULTY SELECT -->
+<div id="screen-difficulty" class="screen">
+  <h1>🃏 Balatro Lite</h1>
+  <p>选择难度（以正式 Balatro White Stake 分数为基准）</p>
+  <div class="diff-cards">
+    <div class="diff-card diff-0" onclick="startWithDifficulty(0)">
+      <div class="diff-emoji">😊</div>
+      <div class="diff-name">新手</div>
+      <div class="diff-stake">Beginner</div>
+      <div class="diff-stats">
+        <span>目标分 <b class="ds-good">×0.6</b></span>
+        <span>初始金 <b class="ds-good">$6</b></span>
+        <span>出牌 <b class="ds-good">4次</b></span>
+        <span>弃牌 <b class="ds-good">4次</b></span>
+      </div>
+    </div>
+    <div class="diff-card diff-1" onclick="startWithDifficulty(1)">
+      <div class="diff-emoji">⚔️</div>
+      <div class="diff-name">标准</div>
+      <div class="diff-stake">White Stake</div>
+      <div class="diff-stats">
+        <span>目标分 <b>×1.0</b></span>
+        <span>初始金 <b>$4</b></span>
+        <span>出牌 <b>3次</b></span>
+        <span>弃牌 <b>3次</b></span>
+      </div>
+    </div>
+    <div class="diff-card diff-2" onclick="startWithDifficulty(2)">
+      <div class="diff-emoji">🔥</div>
+      <div class="diff-name">困难</div>
+      <div class="diff-stake">Red Stake</div>
+      <div class="diff-stats">
+        <span>目标分 <b class="ds-bad">×1.5</b></span>
+        <span>初始金 <b class="ds-bad">$3</b></span>
+        <span>出牌 <b>3次</b></span>
+        <span>弃牌 <b class="ds-bad">2次</b></span>
+      </div>
+    </div>
+    <div class="diff-card diff-3" onclick="startWithDifficulty(3)">
+      <div class="diff-emoji">💀</div>
+      <div class="diff-name">极难</div>
+      <div class="diff-stake">Black Stake</div>
+      <div class="diff-stats">
+        <span>目标分 <b class="ds-bad">×2.5</b></span>
+        <span>初始金 <b class="ds-bad">$2</b></span>
+        <span>出牌 <b class="ds-bad">2次</b></span>
+        <span>弃牌 <b class="ds-bad">1次</b></span>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- BLIND SELECT -->
 <div id="screen-blind-select" class="screen">
@@ -524,10 +603,24 @@ const HTYPES = {
   HIGH_CARD:       {name:'高牌',   bc:5,   bm:1},
 };
 
-const BLIND_TARGETS = [
+// Base targets = Balatro White Stake (official)
+const BLIND_TARGETS_BASE = [
   [300,450,600],[800,1200,1600],[2000,3000,4000],[5000,7500,10000],
   [11000,16500,22000],[20000,30000,40000],[35000,52500,70000],[50000,75000,100000]
 ];
+
+const DIFFICULTIES = [
+  { id:0, name:'新手',  emoji:'😊', mult:0.6, money:6, hands:4, discards:4 },
+  { id:1, name:'标准',  emoji:'⚔️', mult:1.0, money:4, hands:3, discards:3 },
+  { id:2, name:'困难',  emoji:'🔥', mult:1.5, money:3, hands:3, discards:2 },
+  { id:3, name:'极难',  emoji:'💀', mult:2.5, money:2, hands:2, discards:1 },
+];
+
+function getBlindTarget(ante, blind) {
+  const base = BLIND_TARGETS_BASE[ante-1][blind];
+  const diff = DIFFICULTIES[G.difficulty||1];
+  return Math.round(base * diff.mult);
+}
 const BLIND_NAMES = ['小盲注','大盲注','Boss盲注'];
 
 const BOSS_EFFECTS = [
@@ -673,7 +766,8 @@ function evalHand(cards){
 // GAME STATE
 // =============================================
 const G = {
-  state:'BLIND_SELECT', ante:1, blind:0, score:0, target:300,
+  state:'DIFFICULTY', ante:1, blind:0, score:0, target:300,
+  difficulty:1,
   money:4, handsLeft:3, discardsLeft:3,
   jokers:[], handLevels:{}, handsPlayed:0,
   deck:null, hand:[], bossEffect:null, bossDebuffSuit:null,
@@ -692,9 +786,10 @@ const G = {
     } else { this.bossEffect=null; this.bossDebuffSuit=null; }
   },
   startBlind(){
+    const diff=DIFFICULTIES[this.difficulty||1];
     this.score=0;
-    this.handsLeft=3;
-    this.discardsLeft=this.bossEffect==='WATER'?0:3;
+    this.handsLeft=diff.hands;
+    this.discardsLeft=this.bossEffect==='WATER'?0:diff.discards;
     this.playedTypes=[];
     this.deck=new Deck();
     this.hand=this.deck.deal(8);
@@ -854,10 +949,11 @@ function renderBossBanner(){
 }
 
 function renderBlindSelect(){
-  G.target=BLIND_TARGETS[G.ante-1][G.blind];
+  G.target=getBlindTarget(G.ante, G.blind);
   G.setupBoss();
+  const diff=DIFFICULTIES[G.difficulty||1];
   document.getElementById('bs-type').textContent=BLIND_NAMES[G.blind];
-  document.getElementById('bs-ante').textContent=`Ante ${G.ante} / 8`;
+  document.getElementById('bs-ante').textContent=`Ante ${G.ante} / 8 · ${diff.emoji} ${diff.name}`;
   document.getElementById('bs-target').textContent=`目标：${G.target.toLocaleString()} 分`;
   if(G.blind===2&&G.bossEffect){
     const e=BOSS_EFFECTS.find(x=>x.id===G.bossEffect);
@@ -954,7 +1050,7 @@ function saveGame() {
   try {
     const s = {
       ante: G.ante, blind: G.blind, score: G.score, money: G.money,
-      handsLeft: G.handsLeft, discardsLeft: G.discardsLeft,
+      handsLeft: G.handsLeft, discardsLeft: G.discardsLeft, difficulty: G.difficulty||1,
       jokers: G.jokers, handLevels: G.handLevels, handsPlayed: G.handsPlayed,
       bossEffect: G.bossEffect, bossDebuffSuit: G.bossDebuffSuit,
       playedTypes: G.playedTypes, state: G.state,
@@ -974,7 +1070,7 @@ function loadGame() {
     if(s.state === 'GAME_OVER' || s.state === 'GAME_WIN') return false;
     Object.assign(G, {
       ante: s.ante, blind: s.blind, score: s.score, money: s.money,
-      handsLeft: s.handsLeft, discardsLeft: s.discardsLeft,
+      handsLeft: s.handsLeft, discardsLeft: s.discardsLeft, difficulty: s.difficulty||1,
       jokers: s.jokers || [], handLevels: s.handLevels || {},
       handsPlayed: s.handsPlayed || 0,
       bossEffect: s.bossEffect || null, bossDebuffSuit: s.bossDebuffSuit || null,
@@ -984,7 +1080,7 @@ function loadGame() {
     // Restore deck (remaining cards)
     const deckPile = (s.deck||[]).map(c=>new Card(c.suit,c.rank));
     G.deck = { pile: deckPile, deal(n){ return this.pile.splice(0,Math.min(n,this.pile.length)); } };
-    G.target = BLIND_TARGETS[G.ante-1][G.blind];
+    G.target = getBlindTarget(G.ante, G.blind);
     return true;
   } catch(e) {
     console.warn('Load failed', e);
@@ -1271,15 +1367,23 @@ async function discard(){
   }
 }
 
-function restart(){
+function startWithDifficulty(d) {
+  const diff = DIFFICULTIES[d];
   clearSave();
   Object.assign(G,{
-    state:'BLIND_SELECT',ante:1,blind:0,score:0,money:4,
-    handsLeft:3,discardsLeft:3,jokers:[],handLevels:{},
-    handsPlayed:0,deck:null,hand:[],bossEffect:null,
-    bossDebuffSuit:null,playedTypes:[],shopItems:null
+    state:'BLIND_SELECT', ante:1, blind:0, score:0, difficulty:d,
+    money:diff.money, handsLeft:diff.hands, discardsLeft:diff.discards,
+    jokers:[], handLevels:{}, handsPlayed:0, deck:null, hand:[],
+    bossEffect:null, bossDebuffSuit:null, playedTypes:[], shopItems:null
   });
   renderBlindSelect();
+}
+
+function restart(){
+  clearSave();
+  // Return to difficulty screen
+  Object.assign(G,{ state:'DIFFICULTY' });
+  showScreen('screen-difficulty');
 }
 
 // =============================================
@@ -1322,22 +1426,21 @@ document.getElementById('planet-confirm').addEventListener('click',e=>{
 });
 
 // =============================================
-// INIT — load save or start fresh
+// INIT — load save or show difficulty selection
 // =============================================
 if(loadGame()) {
-  // Resume from save
   if(G.state === 'PLAYING') {
     renderPlaying();
   } else if(G.state === 'BLIND_SELECT') {
-    G.target = BLIND_TARGETS[G.ante-1][G.blind];
+    G.target = getBlindTarget(G.ante, G.blind);
     renderBlindSelect();
   } else if(G.state === 'SHOP') {
     renderShop();
   } else {
-    renderBlindSelect();
+    showScreen('screen-difficulty');
   }
 } else {
-  renderBlindSelect();
+  showScreen('screen-difficulty');
 }
 </script>
 </body>
