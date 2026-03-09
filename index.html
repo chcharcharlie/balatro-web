@@ -166,6 +166,20 @@ body {
 .ds-good { color:#44ff88; }
 .ds-bad  { color:#ff8866; }
 
+/* HAND LEVEL BADGES */
+.hlv-badge { display:inline-flex; align-items:center; gap:5px; background:linear-gradient(135deg,#0a1a2a,#051422); border:1.5px solid #4488aa; border-radius:8px; padding:4px 9px; margin-right:6px; cursor:pointer; transition:all 0.15s; font-size:11px; white-space:nowrap; }
+.hlv-badge:hover { border-color:#44ccff; transform:translateY(-1px); box-shadow:0 0 10px rgba(68,136,255,0.25); }
+.hlv-badge .hlv-name { color:#88ccee; font-weight:bold; }
+.hlv-badge .hlv-lv { color:#44ff88; font-weight:bold; }
+
+/* HAND LEVEL TOOLTIP */
+#handlv-tooltip { display:none; position:fixed; background:#12122a; border:1.5px solid #4488ff; border-radius:12px; padding:14px 18px; z-index:400; min-width:180px; text-align:center; pointer-events:none; box-shadow:0 4px 24px rgba(0,0,0,0.6); }
+#handlv-tooltip .ht-name { font-size:15px; font-weight:bold; color:#e0e0ff; margin-bottom:8px; }
+#handlv-tooltip .ht-stats { font-size:13px; line-height:2; }
+#handlv-tooltip .ht-chips { color:#4dccff; font-weight:bold; }
+#handlv-tooltip .ht-mult  { color:#ff8866; font-weight:bold; }
+#handlv-tooltip .ht-lv    { font-size:11px; color:#44ff88; margin-top:4px; }
+
 /* GAME OVER / WIN */
 #screen-gameover,#screen-win { align-items:center; justify-content:center; gap:20px; text-align:center; }
 #screen-gameover h1 { font-size:52px; color:#ff4444; }
@@ -402,6 +416,10 @@ body {
     <span class="jlbl">🃏 小丑：</span>
     <div id="joker-slots"></div>
   </div>
+  <div id="handlv-area" style="display:none;background:rgba(0,0,0,0.15);padding:5px 16px;border-bottom:1px solid #1e1e3a;min-height:44px;overflow-x:auto;white-space:nowrap;">
+    <span style="color:#4488aa;font-size:11px;margin-right:6px;">🪐 升级：</span>
+    <span id="handlv-slots"></span>
+  </div>
   <!-- PLAY ZONE: shows during scoring animation -->
   <div id="play-zone">
     <div id="pz-hand-name"></div>
@@ -424,6 +442,28 @@ body {
     <div style="flex:1"></div>
     <div class="counter"><div class="clbl">出牌次数</div><div class="cval" id="hands-left">3</div></div>
     <div class="counter"><div class="clbl">弃牌次数</div><div class="cval" id="discards-left">3</div></div>
+  </div>
+</div>
+
+<!-- HAND LEVEL TOOLTIP -->
+<div id="handlv-tooltip">
+  <div class="ht-name" id="ht-name"></div>
+  <div class="ht-stats">
+    <span class="ht-chips" id="ht-chips"></span> 筹码 × <span class="ht-mult" id="ht-mult"></span> 倍率
+  </div>
+  <div class="ht-lv" id="ht-lv"></div>
+</div>
+
+<!-- JOKER CONFIRM -->
+<div id="joker-confirm" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:350;align-items:center;justify-content:center;">
+  <div style="background:#12122a;border:2px solid #ffd700;border-radius:16px;padding:22px;width:88%;max-width:340px;text-align:center;">
+    <div style="font-size:13px;color:#ffd700;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">🃏 购买小丑牌</div>
+    <div id="jc-name" style="font-size:22px;font-weight:bold;color:#ffe866;margin-bottom:10px;"></div>
+    <div id="jc-desc" style="font-size:13px;color:#ccaa44;line-height:1.5;background:rgba(255,215,0,0.07);border-radius:10px;padding:12px;margin-bottom:18px;"></div>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button class="btn" id="jc-cancel" style="background:rgba(255,255,255,0.07);color:#8888aa;border:1px solid #3a3a6a;">取消</button>
+      <button class="btn" id="jc-buy" style="background:rgba(255,215,0,0.15);color:#ffd700;border:1px solid #ffd70066;font-size:15px;"></button>
+    </div>
   </div>
 </div>
 
@@ -861,6 +901,44 @@ function renderTopBar(){
     G.score.toLocaleString()+' / '+G.target.toLocaleString();
 }
 
+function renderHandLevels(){
+  const area = document.getElementById('handlv-area');
+  const slots = document.getElementById('handlv-slots');
+  slots.innerHTML = '';
+  const upgraded = Object.entries(G.handLevels).filter(([k,v])=>v>1);
+  if(upgraded.length===0){ area.style.display='none'; return; }
+  area.style.display='block';
+  for(const [type, lv] of upgraded){
+    const ht = HTYPES[type];
+    if(!ht) continue;
+    const bc = ht.bc + (lv-1)*15, bm = ht.bm + (lv-1);
+    const badge = document.createElement('span');
+    badge.className = 'hlv-badge';
+    badge.innerHTML = `<span class="hlv-name">${ht.name}</span><span class="hlv-lv">⭐Lv.${lv}</span>`;
+    badge.addEventListener('click', e => showHandLvTooltip(e, ht.name, bc, bm, lv));
+    slots.appendChild(badge);
+  }
+}
+
+function showHandLvTooltip(e, name, chips, mult, lv){
+  const tip = document.getElementById('handlv-tooltip');
+  document.getElementById('ht-name').textContent = name;
+  document.getElementById('ht-chips').textContent = chips;
+  document.getElementById('ht-mult').textContent = mult;
+  document.getElementById('ht-lv').textContent = '等级 ' + lv;
+  tip.style.display = 'block';
+  // Position near click, keep on screen
+  let x = e.clientX + 12, y = e.clientY - 20;
+  if(x + 200 > window.innerWidth) x = e.clientX - 212;
+  if(y + 120 > window.innerHeight) y = window.innerHeight - 130;
+  tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  // Auto-hide on next tap/click
+  setTimeout(()=>{
+    function hide(){ tip.style.display='none'; document.removeEventListener('click',hide); }
+    document.addEventListener('click', hide);
+  }, 50);
+}
+
 function renderJokers(){
   const c=document.getElementById('joker-slots');
   c.innerHTML='';
@@ -969,7 +1047,7 @@ function renderBlindSelect(){
 }
 
 function renderPlaying(){
-  renderTopBar(); renderJokers(); renderBossBanner(); renderHand();
+  renderTopBar(); renderJokers(); renderHandLevels(); renderBossBanner(); renderHand();
   showScreen('screen-playing');
 }
 
@@ -1012,11 +1090,18 @@ function renderShopItems(){
 }
 
 function buyJoker(item){
-  if(G.money<item.cost||G.jokers.length>=4) return;
-  G.money-=item.cost; G.jokers.push({id:item.id}); item.sold=true;
-  saveGame(); renderShopItems();
+  openJokerConfirm(item);
 }
+let _pendingJoker = null;
 let _pendingPlanet = null;
+
+function openJokerConfirm(item) {
+  _pendingJoker = item;
+  document.getElementById('jc-name').textContent = item.name;
+  document.getElementById('jc-desc').textContent = item.desc;
+  document.getElementById('jc-buy').textContent = '确认购买 $' + item.cost;
+  document.getElementById('joker-confirm').style.display = 'flex';
+}
 
 function openPlanetConfirm(item) {
   _pendingPlanet = item;
@@ -1408,6 +1493,23 @@ document.getElementById('btn-restart-win').addEventListener('click',restart);
 document.getElementById('btn-newgame').addEventListener('click',()=>{
   if(confirm('放弃当前游戏，重新开始？')) restart();
 });
+document.getElementById('jc-cancel').addEventListener('click',()=>{
+  document.getElementById('joker-confirm').style.display='none'; _pendingJoker=null;
+});
+document.getElementById('jc-buy').addEventListener('click',()=>{
+  if(!_pendingJoker) return;
+  const item=_pendingJoker; _pendingJoker=null;
+  document.getElementById('joker-confirm').style.display='none';
+  if(G.money<item.cost||G.jokers.length>=4) return;
+  G.money-=item.cost; G.jokers.push({id:item.id}); item.sold=true;
+  saveGame(); renderShopItems();
+});
+document.getElementById('joker-confirm').addEventListener('click',e=>{
+  if(e.target===document.getElementById('joker-confirm')){
+    document.getElementById('joker-confirm').style.display='none'; _pendingJoker=null;
+  }
+});
+
 document.getElementById('pc-cancel').addEventListener('click',()=>{
   document.getElementById('planet-confirm').style.display='none'; _pendingPlanet=null;
 });
@@ -1417,7 +1519,7 @@ document.getElementById('pc-buy').addEventListener('click',()=>{
   document.getElementById('planet-confirm').style.display='none';
   if(G.money<item.cost) return;
   G.money-=item.cost; G.handLevels[item.hand]=(G.handLevels[item.hand]||1)+1; item.sold=true;
-  saveGame(); renderShopItems();
+  saveGame(); renderShopItems(); renderHandLevels();
 });
 document.getElementById('planet-confirm').addEventListener('click',e=>{
   if(e.target===document.getElementById('planet-confirm')){
