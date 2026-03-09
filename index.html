@@ -1102,9 +1102,8 @@ const G = {
     return {bc:h.bc+lv*15, bm:h.bm+lv};
   },
   setupBoss(){
-    // Generate boss for this ante ONCE (when entering blind=0).
-    // Don't regenerate if already set for this ante — keeps it consistent across shop/blind-select.
-    if(this.blind===0){
+    // Generate boss for this ante ONCE at blind=0, don't regenerate if already set.
+    if(this.blind===0 && !this._anteBossEffect){
       const e=BOSS_EFFECTS[Math.floor(Math.random()*BOSS_EFFECTS.length)];
       this._anteBossEffect=e.id;
       this._anteBossDebuffSuit=e.id==='HEAD'?SUITS[Math.floor(Math.random()*4)]:null;
@@ -1964,6 +1963,8 @@ function afterScoring(){
         showScreen('screen-win'); return;
       }
       G.ante++; G.blind=0; G.state='SHOP';
+      G._anteBossEffect=null; G._anteBossDebuffSuit=null; // clear old boss
+      G.setupBoss(); // pre-generate next ante's boss so shop can preview it
       saveGame();
       renderShop();
     } else {
