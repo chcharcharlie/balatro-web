@@ -618,7 +618,7 @@ const DIFFICULTIES = [
 
 function getBlindTarget(ante, blind) {
   const base = BLIND_TARGETS_BASE[ante-1][blind];
-  const diff = DIFFICULTIES[G.difficulty||1];
+  const diff = DIFFICULTIES[G.difficulty??1];
   return Math.round(base * diff.mult);
 }
 const BLIND_NAMES = ['小盲注','大盲注','Boss盲注'];
@@ -786,7 +786,7 @@ const G = {
     } else { this.bossEffect=null; this.bossDebuffSuit=null; }
   },
   startBlind(){
-    const diff=DIFFICULTIES[this.difficulty||1];
+    const diff=DIFFICULTIES[this.difficulty??1];
     this.score=0;
     this.handsLeft=diff.hands;
     this.discardsLeft=this.bossEffect==='WATER'?0:diff.discards;
@@ -951,7 +951,7 @@ function renderBossBanner(){
 function renderBlindSelect(){
   G.target=getBlindTarget(G.ante, G.blind);
   G.setupBoss();
-  const diff=DIFFICULTIES[G.difficulty||1];
+  const diff=DIFFICULTIES[G.difficulty??1];
   document.getElementById('bs-type').textContent=BLIND_NAMES[G.blind];
   document.getElementById('bs-ante').textContent=`Ante ${G.ante} / 8 · ${diff.emoji} ${diff.name}`;
   document.getElementById('bs-target').textContent=`目标：${G.target.toLocaleString()} 分`;
@@ -1050,7 +1050,7 @@ function saveGame() {
   try {
     const s = {
       ante: G.ante, blind: G.blind, score: G.score, money: G.money,
-      handsLeft: G.handsLeft, discardsLeft: G.discardsLeft, difficulty: G.difficulty||1,
+      handsLeft: G.handsLeft, discardsLeft: G.discardsLeft, difficulty: G.difficulty??1,
       jokers: G.jokers, handLevels: G.handLevels, handsPlayed: G.handsPlayed,
       bossEffect: G.bossEffect, bossDebuffSuit: G.bossDebuffSuit,
       playedTypes: G.playedTypes, state: G.state,
@@ -1070,7 +1070,7 @@ function loadGame() {
     if(s.state === 'GAME_OVER' || s.state === 'GAME_WIN') return false;
     Object.assign(G, {
       ante: s.ante, blind: s.blind, score: s.score, money: s.money,
-      handsLeft: s.handsLeft, discardsLeft: s.discardsLeft, difficulty: s.difficulty||1,
+      handsLeft: s.handsLeft, discardsLeft: s.discardsLeft, difficulty: s.difficulty??1,
       jokers: s.jokers || [], handLevels: s.handLevels || {},
       handsPlayed: s.handsPlayed || 0,
       bossEffect: s.bossEffect || null, bossDebuffSuit: s.bossDebuffSuit || null,
