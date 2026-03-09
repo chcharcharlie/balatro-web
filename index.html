@@ -80,8 +80,8 @@ body {
 #boss-banner.on { display:block; }
 
 /* JOKER AREA */
-#joker-area { background:rgba(0,0,0,0.2); padding:8px 16px; display:flex; align-items:center; gap:8px; border-bottom:1px solid #2a2a4a; min-height:82px; flex-shrink:0; }
-#joker-area .jlbl { color:#887733; font-size:11px; white-space:nowrap; display:inline-block; width:50px; min-width:50px; flex-shrink:0; }
+#joker-area { background:rgba(0,0,0,0.2); padding:10px 16px; display:flex; align-items:center; gap:8px; border-bottom:1px solid #2a2a4a; min-height:86px; flex-shrink:0; overflow:visible; }
+#joker-area .jlbl { color:#887733; font-size:11px; white-space:nowrap; width:52px; min-width:52px; flex-shrink:0; }
 #joker-slots { display:flex; gap:8px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:2px; min-width:0; }
 .joker-card {
   border:2px solid var(--jcol,#ffd700); border-radius:9px;
@@ -91,7 +91,7 @@ body {
   transition:transform 0.15s, box-shadow 0.15s; flex-shrink:0;
   background:#0e0a00;
 }
-.joker-card:hover { transform:scale(1.12); box-shadow:0 6px 18px rgba(0,0,0,0.7), 0 0 10px var(--jcol,#ffd700); z-index:10; }
+.joker-card:hover { transform:scale(1.06); box-shadow:0 4px 14px rgba(0,0,0,0.7), 0 0 8px var(--jcol,#ffd700); z-index:10; }
 .joker-card:active { transform:scale(0.96); }
 .joker-card .j-face {
   border-radius:7px 7px 0 0; background:var(--jcol,#555); flex:1;
@@ -294,13 +294,16 @@ body {
   #boss-banner { font-size:10px; padding:4px 8px; }
 
   /* Joker area: compact, horizontal scroll, shorter */
-  #joker-area { min-height:70px; max-height:70px; padding:7px 8px; overflow-x:auto; overflow-y:visible; flex-wrap:nowrap; flex-shrink:0; }
+  #joker-area { min-height:76px; max-height:76px; padding:10px 8px; overflow-x:auto; overflow-y:visible; flex-wrap:nowrap; flex-shrink:0; scrollbar-width:none; }
+  #joker-area::-webkit-scrollbar { display:none; }
   #joker-area .jlbl { font-size:11px; }
+  #handlv-area { padding:5px 8px !important; }
+  #handlv-area::-webkit-scrollbar { display:none; }
   .joker-card { width:38px; min-width:38px; height:54px; border-radius:7px; }
   .joker-card .j-face { font-size:17px; border-radius:5px 5px 0 0; }
   .joker-card .j-name { font-size:6px; height:16px; }
   .joker-slot { width:38px; min-width:38px; height:54px; border-radius:7px; font-size:14px; }
-  #joker-area { min-height:70px; max-height:70px; }
+  #joker-area { min-height:76px; max-height:76px; }
 
   /* Hand type display: compact */
   #hand-type-display { font-size:15px; padding:3px; min-height:28px; flex-shrink:0; }
@@ -431,8 +434,8 @@ body {
     <span class="jlbl">🃏 小丑：</span>
     <div id="joker-slots"></div>
   </div>
-  <div id="handlv-area" style="display:none;background:rgba(0,0,0,0.15);padding:5px 16px;border-bottom:1px solid #1e1e3a;min-height:44px;overflow-x:auto;white-space:nowrap;align-items:center;">
-    <span style="color:#4488aa;font-size:11px;display:inline-block;width:50px;min-width:50px;flex-shrink:0;">🪐 升级：</span>
+  <div id="handlv-area" style="display:none;background:rgba(0,0,0,0.15);padding:5px 16px;border-bottom:1px solid #1e1e3a;min-height:40px;overflow-x:auto;white-space:nowrap;align-items:center;scrollbar-width:none;">
+    <span id="handlv-lbl" style="color:#4488aa;font-size:11px;width:52px;min-width:52px;flex-shrink:0;">🪐 升级：</span>
     <span id="handlv-slots"></span>
   </div>
   <!-- PLAY ZONE: shows during scoring animation -->
@@ -806,7 +809,7 @@ function evalHand(cards){
     }
     if(!isStraight&&uniq.includes(14)){
       const al=[...uniq.filter(r=>r<=5)].sort((a,b)=>a-b);
-      if(al.length>=4){
+      if(al.length>=(G.jokerSlots||5)){
         const withAce=[1,...al].sort((a,b)=>a-b).slice(-5);
         if(withAce.length===5&&withAce[4]-withAce[0]===4){
           isStraight=true;
@@ -1117,7 +1120,7 @@ function renderShopItems(){
   for(const item of G.shopItems.jokers){
     const isOwned=owned.has(item.id);
     const noMoney=G.money<item.cost;
-    const full=G.jokers.length>=4;
+    const full=G.jokers.length>=(G.jokerSlots||5);
     const disabled=item.sold||isOwned||noMoney||full;
     const el=document.createElement('div');
     el.className='shop-item'+(item.sold?' sold':disabled?' cant-afford':'');
@@ -1573,7 +1576,7 @@ document.getElementById('jc-buy').addEventListener('click',()=>{
   if(!_pendingJoker) return;
   const item=_pendingJoker; _pendingJoker=null;
   document.getElementById('joker-confirm').style.display='none';
-  if(G.money<item.cost||G.jokers.length>=4) return;
+  if(G.money<item.cost||G.jokers.length>=(G.jokerSlots||5)) return;
   G.money-=item.cost; G.jokers.push({id:item.id}); item.sold=true;
   saveGame(); renderShopItems();
 });
