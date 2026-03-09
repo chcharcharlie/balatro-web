@@ -31,6 +31,7 @@ body {
   display: flex; flex-direction: column;
   align-items: center; justify-content: space-between;
   padding: 5px;
+  position: relative;
   cursor: pointer;
   transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s, opacity 0.2s;
   flex-shrink: 0;
@@ -46,6 +47,7 @@ body {
 .card-rank { font-size: 16px; font-weight: bold; line-height: 1; align-self: flex-start; }
 .card-suit { font-size: 26px; line-height: 1; }
 .card-rank-bot { font-size: 16px; font-weight: bold; line-height: 1; align-self: flex-end; transform: rotate(180deg); }
+.card-bonus-badge { position:absolute; bottom:3px; left:3px; font-size:9px; font-weight:bold; background:#1a5e1a; color:#88ff88; border-radius:4px; padding:1px 4px; line-height:1.3; pointer-events:none; z-index:2; }
 
 /* BUTTONS */
 .btn { padding: 10px 22px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; transition: all 0.15s; }
@@ -480,7 +482,8 @@ body {
 <div id="joker-detail" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:360;align-items:center;justify-content:center;">
   <div style="background:#1a1200;border:2px solid #ffd700;border-radius:16px;padding:24px;width:84%;max-width:300px;text-align:center;">
     <div id="jd-emoji" style="font-size:52px;margin-bottom:10px;font-family:'Segoe UI Symbol','Apple Symbols','Arial Unicode MS',sans-serif;"></div>
-    <div id="jd-name" style="font-size:20px;font-weight:bold;color:#ffd700;margin-bottom:10px;"></div>
+    <div id="jd-name" style="font-size:20px;font-weight:bold;color:#ffd700;margin-bottom:6px;"></div>
+    <div id="jd-price" style="font-size:12px;color:#aaa;margin-bottom:10px;"></div>
     <div id="jd-desc" style="font-size:13px;color:#ccaa44;line-height:1.6;background:rgba(255,215,0,0.07);border-radius:10px;padding:12px;margin-bottom:16px;"></div>
     <div style="display:flex;gap:8px;justify-content:center;margin-bottom:10px;">
       <button class="btn" id="jd-move-left" style="display:none;background:rgba(100,100,255,0.15);color:#aaaaff;border:1px solid #aaaaff55;flex:1;">◀ 左移</button>
@@ -1268,8 +1271,14 @@ function openJokerDetail(def, idx){
   _detailJokerIdx = idx ?? -1;
   const el=document.getElementById('jd-emoji');
   if(el){ el.style.setProperty('--jcol',def.col||'#ffd700'); el.textContent=def.sym||'?'; }
-  document.getElementById('jd-name').textContent=def.name;
-  document.getElementById('jd-desc').textContent=def.desc;
+  document.getElementById('jd-name').textContent=tDef(def,'name');
+  document.getElementById('jd-desc').textContent=tDef(def,'desc');
+  // Price line: buy cost + sell value
+  const sv=Math.max(1,Math.ceil(def.cost/2));
+  const priceEl=document.getElementById('jd-price');
+  if(priceEl) priceEl.textContent=CURR_LANG==='en'
+    ?`Buy: $${def.cost}  ·  Sell: $${sv}`
+    :`买价：$${def.cost}  ·  售价：$${sv}`;
   // Show/hide move buttons based on position
   const total=G.jokers.length;
   const lBtn=document.getElementById('jd-move-left');
@@ -1307,7 +1316,9 @@ function mkCard(card){
   const el=document.createElement('div');
   el.className='card '+suitClass(card.suit)+(card.sel?' selected':'');
   el.dataset.cid=card.id;
-  el.innerHTML=`<span class="card-rank">${card.rank}</span><span class="card-suit">${card.suit}</span><span class="card-rank-bot">${card.rank}</span>`;
+  const bonus=card._bonus||0;
+  const bonusBadge=bonus>0?`<span class="card-bonus-badge">+${bonus}</span>`:'';
+  el.innerHTML=`<span class="card-rank">${card.rank}</span><span class="card-suit">${card.suit}</span><span class="card-rank-bot">${card.rank}</span>${bonusBadge}`;
   return el;
 }
 
@@ -1540,8 +1551,8 @@ function saveGame() {
       handTypeCounts: G.handTypeCounts||{},
       boughtVouchers: [...(G.boughtVouchers||[])],
       voucherEffects: G.voucherEffects||{},
-      hand: G.hand ? G.hand.map(c=>({suit:c.suit,rank:c.rank})) : [],
-      deck: G.deck ? G.deck.pile.map(c=>({suit:c.suit,rank:c.rank})) : [],
+      hand: G.hand ? G.hand.map(c=>({suit:c.suit,rank:c.rank,bonus:c._bonus||0})) : [],
+      deck: G.deck ? G.deck.pile.map(c=>({suit:c.suit,rank:c.rank,bonus:c._bonus||0})) : [],
       // Save shop item IDs + sold status (no functions, reconstruct on load)
       shopSave: G.shopItems ? {
         jokerIds: G.shopItems.jokers.map(j=>({id:j.id,sold:j.sold,cost:j.cost})),
@@ -1572,9 +1583,9 @@ function loadGame() {
       boughtVouchers: new Set(s.boughtVouchers||[]),
       voucherEffects: s.voucherEffects||{extraShopJokers:0,discount:0},
     });
-    G.hand = (s.hand||[]).map(c=>new Card(c.suit,c.rank));
+    G.hand = (s.hand||[]).map(c=>{ const card=new Card(c.suit,c.rank); if(c.bonus) card._bonus=c.bonus; return card; });
     // Restore deck (remaining cards)
-    const deckPile = (s.deck||[]).map(c=>new Card(c.suit,c.rank));
+    const deckPile = (s.deck||[]).map(c=>{ const card=new Card(c.suit,c.rank); if(c.bonus) card._bonus=c.bonus; return card; });
     G.deck = { pile: deckPile, deal(n){ return this.pile.splice(0,Math.min(n,this.pile.length)); } };
     G.target = getBlindTarget(G.ante, G.blind);
     // Restore shop items (reconstruct full objects from saved IDs)
