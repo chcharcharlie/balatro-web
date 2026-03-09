@@ -903,18 +903,16 @@ const VOUCHER_DEFS = [
 ];
 
 function getAvailableVoucher(g){
-  // Return one voucher available for this shop visit:
-  // base unlocked by default; upgrade unlocked if its prerequisite is bought
-  for(const v of VOUCHER_DEFS){
-    if(g.boughtVouchers.has(v.id)) continue;
-    // Check if it's a base (no one unlocks it) or its predecessor was bought
-    const isBase = !VOUCHER_DEFS.some(x=>x.unlocks===v.id);
+  // Collect all currently purchasable vouchers (base or unlocked upgrade)
+  const available = VOUCHER_DEFS.filter(v => {
+    if(g.boughtVouchers.has(v.id)) return false;
     const unlockedBy = VOUCHER_DEFS.find(x=>x.unlocks===v.id);
-    if(isBase || (unlockedBy && g.boughtVouchers.has(unlockedBy.id))){
-      return v;
-    }
-  }
-  return null;
+    // It's a base voucher if nothing unlocks it, or its predecessor is bought
+    return !unlockedBy || g.boughtVouchers.has(unlockedBy.id);
+  });
+  if(available.length===0) return null;
+  // Pick randomly (like Balatro's shuffled voucher pool)
+  return available[Math.floor(Math.random()*available.length)];
 }
 
 // =============================================
