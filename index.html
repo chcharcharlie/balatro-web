@@ -1883,7 +1883,9 @@ document.getElementById('btn-reroll').addEventListener('click',()=>{
   if(G.money<rc) return;
   G.money-=rc;
   G.shopRerollCost=rc+1; // each reroll costs +$1 more (Balatro rule)
+  G.shopItems=null; // clear first so genShop generates fresh
   genShop();
+  saveGame(); // persist new items immediately
   renderShopItems();
 });
 document.getElementById('btn-restart').addEventListener('click',restart);
