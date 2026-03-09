@@ -1014,15 +1014,14 @@ function evalHand(cards){
         break;
       }
     }
-    // Shortcut: allow gaps of 1 (span of 8 for 5 cards, max 1 gap)
+    // Shortcut: each adjacent pair may skip at most 1 rank (diff ≤ 2), span ≤ 8
     if(!isStraight&&hasShortcut){
       for(let i=0;i<=uniq.length-5;i++){
         const sl=uniq.slice(i,i+5);
-        // span ≤ 8 and at most one gap of 2 (all other consecutive or gap=1)
         if(sl[4]-sl[0]<=8){
-          let gaps=0;
-          for(let k=1;k<sl.length;k++) if(sl[k]-sl[k-1]>1) gaps++;
-          if(gaps<=1){
+          let valid=true;
+          for(let k=1;k<sl.length;k++) if(sl[k]-sl[k-1]>2){valid=false;break;}
+          if(valid){
             isStraight=true;
             const ss=new Set(sl);
             stCards=sorted.filter(c=>ss.has(c.ro));
