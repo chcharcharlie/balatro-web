@@ -593,7 +593,7 @@ body {
 
     <div class="h-sec">
       <div class="h-title">🃏 小丑牌</div>
-      <p>购买后永久生效，出牌时自动触发效果（增加筹码或倍率）。最多持有 <b>5 张</b>。点击小丑牌查看详细效果。</p>
+      <p>购买后永久生效，出牌时自动触发效果（增加筹码或倍率）。最多持有 <b>5 张</b>，点击小丑牌查看详细效果。共 17 种小丑牌，均对应真实 Balatro 原版设计。</p>
     </div>
 
     <div class="h-sec">
@@ -746,18 +746,24 @@ const JOKER_DEFS = [
    apply(h,g){return {am:Math.floor(Math.random()*24)};}},
   {id:'J11',sym:'★',col:'#208838',name:'忠诚卡',cost:5,desc:'每出6次牌：×4 倍率',
    apply(h,g){return (g.handsPlayed>0&&g.handsPlayed%6===0)?{xm:4}:{};}},
-  {id:'J12',sym:'↑',col:'#c04010',name:'举拳头',cost:5,desc:'最低点数×2 作为+倍率',
+  {id:'J12',sym:'↑',col:'#c04010',name:'举拳头',cost:5,desc:'手中最低点数×2 作为+倍率（使用未打出的手牌）',
    apply(h,g){
-     if(!h.cards||h.cards.length===0) return {};
-     const min=Math.min(...h.cards.map(c=>RANK_ORD[c.rank]));
+     // Raised Fist: use lowest ranked card REMAINING in hand (not played)
+     const remaining = g.hand.filter(c=>!c.sel);
+     if(remaining.length===0) return {};
+     const min=Math.min(...remaining.map(c=>RANK_ORD[c.rank]));
      return {am:min*2};
    }},
-  {id:'J13',sym:'⊟',col:'#404458',name:'小丑模板',cost:8,desc:'每个空槽：×1 额外倍率',
+  {id:'J13',sym:'⊟',col:'#404458',name:'小丑模板',cost:8,desc:'每个空槽（含本身）：×N 总倍率',
    apply(h,g){const e=(g.jokerSlots||5)-g.jokers.length; return e>0?{xm:1+e}:{};}},
   {id:'J14',sym:'◆',col:'#1870b8',name:'聪明小丑',cost:4,desc:'含两对时：+80 筹码',
    apply(h,g){return ['TWO_PAIR','FULL_HOUSE'].includes(h.type)?{ac:80}:{};}},
   {id:'J15',sym:'⚔',col:'#185038',name:'狡野小丑',cost:5,desc:'含三条时：+100 筹码',
    apply(h,g){return ['THREE_OF_A_KIND','FULL_HOUSE','FOUR_OF_A_KIND'].includes(h.type)?{ac:100}:{};}},
+  {id:'J16',sym:'⇒',col:'#2040b8',name:'阴险小丑',cost:4,desc:'含顺子时：+100 筹码',
+   apply(h,g){return ['STRAIGHT','STRAIGHT_FLUSH'].includes(h.type)?{ac:100}:{};}},
+  {id:'J17',sym:'◇',col:'#6020a0',name:'灵巧小丑',cost:4,desc:'含同花时：+80 筹码',
+   apply(h,g){return ['FLUSH','STRAIGHT_FLUSH'].includes(h.type)?{ac:80}:{};}},
 ];
 
 // =============================================
