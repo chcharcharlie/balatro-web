@@ -1538,6 +1538,22 @@ function buyVoucher(v){
   document.getElementById('vc-buy').textContent=(CURR_LANG==='en'?'Buy':'确认购买')+' $'+v.cost;
   document.getElementById('voucher-confirm').style.display='flex';
 }
+function refreshShopPrices(){
+  if(!G.shopItems) return;
+  const d=G.voucherEffects?.discount||0;
+  const pd=G.voucherEffects?.planetDiscount||0;
+  for(const j of G.shopItems.jokers){
+    if(!j.sold){ const def=JOKER_DEFS.find(x=>x.id===j.id); j.cost=Math.max(1,(def?def.cost:3)-d); }
+  }
+  for(const p of G.shopItems.planets){
+    if(!p.sold){ p.cost=Math.max(1,3-d-pd); }
+  }
+  if(G.shopItems.voucher&&!G.shopItems.voucher.sold){
+    const def=VOUCHER_DEFS.find(x=>x.id===G.shopItems.voucher.id);
+    G.shopItems.voucher.cost=Math.max(1,(def?def.cost:10)-d);
+  }
+}
+
 function confirmBuyVoucher(){
   const v=_pendingVoucher; _pendingVoucher=null;
   if(!v||G.money<v.cost||G.boughtVouchers.has(v.id)) return;
@@ -1545,6 +1561,7 @@ function confirmBuyVoucher(){
   G.boughtVouchers.add(v.id);
   v.sold=true;
   v.apply(G);
+  refreshShopPrices(); // update unsold item prices with new discount/effects
   saveGame(); renderShopItems();
 }
 
